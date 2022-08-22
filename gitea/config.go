@@ -61,12 +61,11 @@ func (c *Config) Client() (interface{}, error) {
 
 	var client *gitea.Client
 	if c.Token != "" {
-		client, _ = gitea.NewClient(c.BaseURL, gitea.SetToken(c.Token))
+		client, _ = gitea.NewClient(c.BaseURL, gitea.SetToken(c.Token), gitea.SetHTTPClient(httpClient))
 	}
-	client.SetHTTPClient(httpClient)
 
 	if c.Username != "" {
-		client.SetBasicAuth(c.Username, c.Password)
+		client, _ = gitea.NewClient(c.BaseURL, gitea.SetBasicAuth(c.Username, c.Password), gitea.SetHTTPClient(httpClient))
 	}
 
 	// Test the credentials by checking we can get information about the authenticated user.
