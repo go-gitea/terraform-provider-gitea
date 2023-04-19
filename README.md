@@ -1,3 +1,3 @@
 # terraform-provider-gitea
-Terraform Gitea Provider
 
+Terraform Gitea Provider
