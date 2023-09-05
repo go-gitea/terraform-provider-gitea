@@ -116,7 +116,7 @@ func dataSourceGiteaRepoRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	username := strings.ToLower(usernameData.(string))
 
-	nameData, nameOk := d.GetOk("username")
+	nameData, nameOk := d.GetOk("name")
 	if !nameOk {
 		return fmt.Errorf("name of repo must be passed")
 	}
