@@ -19,3 +19,23 @@ resource "gitea_team" "test_team" {
   permission   = "write"
   members      = [gitea_user.test.username]
 }
+
+
+resource "gitea_repository" "test" {
+  username     = gitea_org.test_org.name
+  name         = "test"
+  private      = true
+  issue_labels = "Default"
+  license      = "MIT"
+  gitignores   = "Go"
+}
+
+resource "gitea_team" "test_team_restricted" {
+  name                     = "Restricted Devs"
+  organisation             = gitea_org.test_org.name
+  description              = "Restricted Devs of Test Org"
+  permission               = "write"
+  members                  = [gitea_user.test.username]
+  include_all_repositories = false
+  repositories             = [gitea_repository.test.name]
+}

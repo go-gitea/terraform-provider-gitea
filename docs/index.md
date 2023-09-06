@@ -16,8 +16,8 @@ description: |-
 terraform {
   required_providers {
     gitea = {
-      source = "gitea/gitea"
-      version = "0.6.1"
+      source = "go-gitea/gitea"
+      version = "0.1.0"
     }
   }
 }

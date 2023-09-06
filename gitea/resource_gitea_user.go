@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"code.gitea.io/sdk/gitea"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 const (

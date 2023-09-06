@@ -20,6 +20,10 @@ Handling [gitea oauth application](https://docs.gitea.io/en-us/oauth2-provider/)
 - `name` (String) OAuth Application name
 - `redirect_uris` (Set of String) Accepted redirect URIs
 
+### Optional
+
+- `confidential_client` (Boolean) If set to false, it will be a public client (PKCE will be required)
+
 ### Read-Only
 
 - `client_id` (String) OAuth2 Application client id

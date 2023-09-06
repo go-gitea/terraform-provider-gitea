@@ -46,5 +46,6 @@ resource "gitea_repository" "org_repo" {
 
 - `avatar_url` (String)
 - `id` (String) The ID of this resource.
+- `repos` (List of String) List of all Repositories that are part of this organisation
 
 

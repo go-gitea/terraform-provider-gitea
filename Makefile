@@ -1,9 +1,8 @@
 TEST?=./gitea
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
-
 GOFMT ?= gofmt -s
 
-VERSION = 0.6.1
+VERSION = 0.2.0
 
 test: fmt-check
 	go test -i $(TEST) || exit 1
@@ -31,11 +30,6 @@ fmt-check:
 		exit 1; \
 	fi;
 build: 
-	go build -o terraform-provider-gitea_${VERSION}
-install: build 
-	@echo installing to 
-	@echo ~/.terraform.d/plugins/terraform.local/local/gitea/${VERSION}/linux_amd64/terraform-provider-gitea_${VERSION}
-	@mkdir -p ~/.terraform.d/plugins/terraform.local/local/gitea/${VERSION}/linux_amd64
-	@mv terraform-provider-gitea_${VERSION} ~/.terraform.d/plugins/terraform.local/local/gitea/${VERSION}/linux_amd64/terraform-provider-gitea_${VERSION}
+	go build -ldflags="-X 'main.Version=${VERSION}'" -o terraform-provider-gitea_${VERSION}
 doc:
 	tfplugindocs

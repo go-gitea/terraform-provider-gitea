@@ -1,11 +1,15 @@
 package gitea
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"code.gitea.io/sdk/gitea"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 const (
@@ -34,7 +38,8 @@ const (
 	repoAllowManualMerge         string = "allow_manual_merge"
 	repoAutodetectManualMerge    string = "autodetect_manual_merge"
 	repoMirror                   string = "mirror"
-	migrationCloneAddress        string = "migration_clone_addresse"
+	migrationCloneAddresse       string = "migration_clone_addresse"
+	migrationCloneAddress        string = "migration_clone_address"
 	migrationService             string = "migration_service"
 	migrationServiceAuthName     string = "migration_service_auth_username"
 	migrationServiceAuthPassword string = "migration_service_auth_password"
@@ -46,6 +51,34 @@ const (
 	migrationLFS                 string = "migration_lfs"
 	migrationLFSEndpoint         string = "migration_lfs_endpoint"
 )
+
+func searchUserByName(c *gitea.Client, name string) (res *gitea.User, err error) {
+	page := 1
+
+	for {
+		users, _, err := c.AdminListUsers(gitea.AdminListUsersOptions{
+			ListOptions: gitea.ListOptions{
+				Page:     page,
+				PageSize: 50,
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		if len(users) == 0 {
+			return nil, fmt.Errorf("User with name %s could not be found", name)
+		}
+
+		for _, user := range users {
+			if user.UserName == name {
+				return user, nil
+			}
+		}
+
+		page += 1
+	}
+}
 
 func resourceRepoRead(d *schema.ResourceData, meta interface{}) (err error) {
 	client := meta.(*gitea.Client)
@@ -78,21 +111,39 @@ func resourceRepoCreate(d *schema.ResourceData, meta interface{}) (err error) {
 
 	var repo *gitea.Repository
 	var resp *gitea.Response
-	var orgRepo bool
+	var orgRepo, hasAdmin bool
 
 	_, resp, err = client.GetOrg(d.Get(repoOwner).(string))
 
 	if resp.StatusCode == 404 {
+		_, err := searchUserByName(client, d.Get(repoOwner).(string))
+		if err != nil {
+			if strings.Contains(err.Error(), "could not be found") {
+				return errors.New(fmt.Sprintf("Creation of repository cound not proceed as owner %s is not present in gitea", d.Get(repoOwner).(string)))
+			}
+			tflog.Warn(context.Background(), "Error query for users. Assuming missing permissions and proceding with user permissions")
+			hasAdmin = false
+		} else {
+			hasAdmin = true
+		}
 		orgRepo = false
 	} else {
 		orgRepo = true
 	}
 
-	if (d.Get(repoMirror)).(bool) {
+	var cloneAddr string
+	if d.Get(migrationCloneAddresse).(string) != "" {
+		cloneAddr = d.Get(migrationCloneAddresse).(string)
+	} else {
+		cloneAddr = d.Get(migrationCloneAddress).(string)
+	}
+
+	if cloneAddr != "" {
+
 		opts := gitea.MigrateRepoOption{
 			RepoName:       d.Get(repoName).(string),
 			RepoOwner:      d.Get(repoOwner).(string),
-			CloneAddr:      d.Get(migrationCloneAddress).(string),
+			CloneAddr:      cloneAddr,
 			Service:        gitea.GitServiceType(d.Get(migrationService).(string)),
 			Mirror:         d.Get(repoMirror).(bool),
 			Private:        d.Get(repoPrivateFlag).(bool),
@@ -138,12 +189,16 @@ func resourceRepoCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		if orgRepo {
 			repo, _, err = client.CreateOrgRepo(d.Get(repoOwner).(string), opts)
 		} else {
-			repo, _, err = client.CreateRepo(opts)
+			if hasAdmin {
+				repo, _, err = client.AdminCreateRepo(d.Get(repoOwner).(string), opts)
+			} else {
+				repo, _, err = client.CreateRepo(opts)
+			}
 		}
 	}
 
 	if err != nil {
-		return
+		return err
 	}
 
 	err = setRepoResourceData(repo, d)
@@ -223,6 +278,7 @@ func respurceRepoDelete(d *schema.ResourceData, meta interface{}) (err error) {
 
 func setRepoResourceData(repo *gitea.Repository, d *schema.ResourceData) (err error) {
 	d.SetId(fmt.Sprintf("%d", repo.ID))
+	d.Set("username", repo.Owner.UserName)
 	d.Set("name", repo.Name)
 	d.Set("description", repo.Description)
 	d.Set("full_name", repo.FullName)
@@ -239,8 +295,8 @@ func setRepoResourceData(repo *gitea.Repository, d *schema.ResourceData) (err er
 	d.Set("watchers", repo.Watchers)
 	d.Set("open_issue_count", repo.OpenIssues)
 	d.Set("default_branch", repo.DefaultBranch)
-	d.Set("created", repo.Created)
-	d.Set("updated", repo.Updated)
+	d.Set("created", repo.Created.String())
+	d.Set("updated", repo.Updated.String())
 	d.Set("permission_admin", repo.Permissions.Admin)
 	d.Set("permission_push", repo.Permissions.Push)
 	d.Set("permission_pull", repo.Permissions.Pull)
@@ -255,7 +311,7 @@ func resourceGiteaRepository() *schema.Resource {
 		Update: resourceRepoUpdate,
 		Delete: respurceRepoDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
 			"username": {
@@ -445,6 +501,13 @@ func resourceGiteaRepository() *schema.Resource {
 				Default:  false,
 			},
 			"migration_clone_addresse": {
+				Type:        schema.TypeString,
+				Required:    false,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "DEPRECATED in favor of `migration_clone_address`",
+			},
+			"migration_clone_address": {
 				Type:     schema.TypeString,
 				Required: false,
 				Optional: true,
@@ -512,6 +575,18 @@ func resourceGiteaRepository() *schema.Resource {
 				Required: false,
 				Optional: true,
 				Default:  "",
+			},
+			"clone_url": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"html_url": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"ssh_url": {
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 		},
 		Description: "`gitea_repository` manages a gitea repository.\n\n" +

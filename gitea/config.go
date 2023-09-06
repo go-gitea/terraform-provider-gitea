@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"code.gitea.io/sdk/gitea"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/logging"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 )
 
 // Config is per-provider, specifies where to connect to gitea
@@ -28,8 +29,7 @@ func (c *Config) Client() (interface{}, error) {
 		return nil, fmt.Errorf("either a token or a username needs to be used")
 	}
 	// Configure TLS/SSL
-	tlsConfig := &tls.Config{}
-
+	var tlsConfig tls.Config
 	// If a CACertFile has been specified, use that for cert validation
 	if c.CACertFile != "" {
 		caCert, err := ioutil.ReadFile(c.CACertFile)
@@ -43,13 +43,12 @@ func (c *Config) Client() (interface{}, error) {
 	}
 
 	// If configured as insecure, turn off SSL verification
-	if c.Insecure {
-		tlsConfig.InsecureSkipVerify = true
-	}
+	tlsConfig.InsecureSkipVerify = c.Insecure
 
 	t := http.DefaultTransport.(*http.Transport).Clone()
-	t.TLSClientConfig = tlsConfig
+	t.TLSClientConfig = &tlsConfig
 	t.MaxIdleConnsPerHost = 100
+	t.TLSHandshakeTimeout = 10 * time.Second
 
 	httpClient := &http.Client{
 		Transport: logging.NewTransport("Gitea", t),
@@ -60,16 +59,23 @@ func (c *Config) Client() (interface{}, error) {
 	}
 
 	var client *gitea.Client
+	var err error
 	if c.Token != "" {
-		client, _ = gitea.NewClient(c.BaseURL, gitea.SetToken(c.Token), gitea.SetHTTPClient(httpClient))
+		client, err = gitea.NewClient(c.BaseURL, gitea.SetToken(c.Token), gitea.SetHTTPClient(httpClient))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if c.Username != "" {
-		client, _ = gitea.NewClient(c.BaseURL, gitea.SetBasicAuth(c.Username, c.Password), gitea.SetHTTPClient(httpClient))
+		client, err = gitea.NewClient(c.BaseURL, gitea.SetBasicAuth(c.Username, c.Password), gitea.SetHTTPClient(httpClient))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Test the credentials by checking we can get information about the authenticated user.
-	_, _, err := client.GetMyUserInfo()
+	_, _, err = client.GetMyUserInfo()
 
 	return client, err
 }

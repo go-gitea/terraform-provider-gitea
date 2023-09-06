@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 // Provider returns a terraform.ResourceProvider.
-func Provider() terraform.ResourceProvider {
+func Provider() *schema.Provider {
 
 	// The actual provider
 	return &schema.Provider{
@@ -74,13 +73,17 @@ func Provider() terraform.ResourceProvider {
 
 		ResourcesMap: map[string]*schema.Resource{
 			"gitea_org": resourceGiteaOrg(),
-			// "gitea_team": resourceGiteaTeam(),
-			// "gitea_repo": resourceGiteaRepo(),
-			"gitea_user":       resourceGiteaUser(),
-			"gitea_oauth2_app": resourceGiteaOauthApp(),
-			"gitea_repository": resourceGiteaRepository(),
-			"gitea_public_key": resourceGiteaPublicKey(),
-			"gitea_team":       resourceGiteaTeam(),
+			// "gitea_team":       resourceGiteaTeam(),
+			// "gitea_repo":       resourceGiteaRepo(),
+			"gitea_user":           resourceGiteaUser(),
+			"gitea_oauth2_app":     resourceGiteaOauthApp(),
+			"gitea_repository":     resourceGiteaRepository(),
+			"gitea_fork":           resourceGiteaFork(),
+			"gitea_public_key":     resourceGiteaPublicKey(),
+			"gitea_team":           resourceGiteaTeam(),
+			"gitea_git_hook":       resourceGiteaGitHook(),
+			"gitea_token":          resourceGiteaToken(),
+			"gitea_repository_key": resourceGiteaRepositoryKey(),
 		},
 
 		ConfigureFunc: providerConfigure,
@@ -117,6 +120,9 @@ func validateAPIURLVersion(value interface{}, key string) (ws []string, es []err
 	v := value.(string)
 	if strings.HasSuffix(v, "/api/v1") || strings.HasSuffix(v, "/api/v1/") {
 		es = append(es, fmt.Errorf("terraform-gitea-provider base URL format is incorrect; Please leave out API Path %s", v))
+	}
+	if strings.Contains(v, "localhost") && strings.Contains(v, ".") {
+		es = append(es, fmt.Errorf("terraform-gitea-provider base URL violates RFC 2606; Please do not define a subdomain for localhost!"))
 	}
 	return
 }

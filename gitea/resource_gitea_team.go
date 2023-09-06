@@ -1,12 +1,13 @@
 package gitea
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"code.gitea.io/sdk/gitea"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 const (
@@ -18,6 +19,7 @@ const (
 	TeamIncludeAllReposFlag string = "include_all_repositories"
 	TeamUnits               string = "units"
 	TeamMembers             string = "members"
+	TeamRepositories        string = "repositories"
 )
 
 func resourceTeamRead(d *schema.ResourceData, meta interface{}) (err error) {
@@ -39,7 +41,7 @@ func resourceTeamRead(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	}
 
-	err = setTeamResourceData(team, d)
+	err = setTeamResourceData(team, d, meta)
 
 	return
 }
@@ -75,12 +77,14 @@ func resourceTeamCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		units = append(units, gitea.RepoUnitProjects)
 	}
 
+	includeAllRepos := d.Get(TeamIncludeAllReposFlag).(bool)
+
 	opts := gitea.CreateTeamOption{
 		Name:                    d.Get(TeamName).(string),
 		Description:             d.Get(TeamDescription).(string),
 		Permission:              gitea.AccessMode(d.Get(TeamPermissions).(string)),
 		CanCreateOrgRepo:        d.Get(TeamCreateRepoFlag).(bool),
-		IncludesAllRepositories: d.Get(TeamIncludeAllReposFlag).(bool),
+		IncludesAllRepositories: includeAllRepos,
 		Units:                   units,
 	}
 
@@ -101,7 +105,14 @@ func resourceTeamCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	}
 
-	err = setTeamResourceData(team, d)
+	if !includeAllRepos {
+		err = setTeamRepositories(team, d, meta, false)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = setTeamResourceData(team, d, meta)
 
 	return
 }
@@ -181,9 +192,16 @@ func resourceTeamUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	}
 
+	if !includeAllRepos {
+		err = setTeamRepositories(team, d, meta, true)
+		if err != nil {
+			return err
+		}
+	}
+
 	team, _, _ = client.GetTeam(id)
 
-	err = setTeamResourceData(team, d)
+	err = setTeamResourceData(team, d, meta)
 
 	return
 }
@@ -208,7 +226,13 @@ func resourceTeamDelete(d *schema.ResourceData, meta interface{}) (err error) {
 	return
 }
 
-func setTeamResourceData(team *gitea.Team, d *schema.ResourceData) (err error) {
+func setTeamResourceData(team *gitea.Team, d *schema.ResourceData, meta interface{}) (err error) {
+	client := meta.(*gitea.Client)
+	if err := client.CheckServerVersionConstraint(">= 1.19.4"); err != nil {
+		d.Set(TeamOrg, d.Get(TeamOrg).(string))
+	} else {
+		d.Set(TeamOrg, team.Organization.UserName)
+	}
 	d.SetId(fmt.Sprintf("%d", team.ID))
 	d.Set(TeamCreateRepoFlag, team.CanCreateOrgRepo)
 	d.Set(TeamDescription, team.Description)
@@ -216,8 +240,8 @@ func setTeamResourceData(team *gitea.Team, d *schema.ResourceData) (err error) {
 	d.Set(TeamPermissions, string(team.Permission))
 	d.Set(TeamIncludeAllReposFlag, team.IncludesAllRepositories)
 	d.Set(TeamUnits, d.Get(TeamUnits).(string))
-	d.Set(TeamOrg, d.Get(TeamOrg).(string))
 	d.Set(TeamMembers, d.Get(TeamMembers))
+	d.Set(TeamRepositories, d.Get(TeamRepositories))
 	return
 }
 
@@ -228,7 +252,7 @@ func resourceGiteaTeam() *schema.Resource {
 		Update: resourceTeamUpdate,
 		Delete: resourceTeamDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -290,7 +314,75 @@ func resourceGiteaTeam() *schema.Resource {
 				Computed:    true,
 				Description: "List of Users that should be part of this team",
 			},
+			"repositories": {
+				Type: schema.TypeList,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional:    true,
+				Required:    false,
+				Computed:    true,
+				Description: "List of Repositories that should be part of this team",
+			},
 		},
 		Description: "`gitea_team` manages Team that are part of an organisation.",
 	}
+}
+
+func setTeamRepositories(team *gitea.Team, d *schema.ResourceData, meta interface{}, update bool) (err error) {
+	client := meta.(*gitea.Client)
+
+	org := d.Get(TeamOrg).(string)
+
+	repositories := make(map[string]bool)
+	for _, repo := range d.Get(TeamRepositories).([]interface{}) {
+		if repo != "" {
+			repositories[repo.(string)] = true
+		}
+	}
+
+	if update {
+		page := 1
+
+		for {
+			var existingRepositories []*gitea.Repository
+			existingRepositories, _, err = client.ListTeamRepositories(team.ID, gitea.ListTeamRepositoriesOptions{
+				ListOptions: gitea.ListOptions{
+					Page:     page,
+					PageSize: 50,
+				},
+			})
+			if err != nil {
+				return errors.New(fmt.Sprintf("[ERROR] Error listeng team repositories: %s", err))
+			}
+			if len(existingRepositories) == 0 {
+				break
+			}
+
+			for _, exr := range existingRepositories {
+				_, exists := repositories[exr.Name]
+				if exists {
+					repositories[exr.Name] = false
+				} else {
+					_, err = client.RemoveTeamRepository(team.ID, org, exr.Name)
+					if err != nil {
+						return errors.New(fmt.Sprintf("[ERROR] Error removing team repository %q: %s", exr.Name, err))
+					}
+				}
+			}
+
+			page += 1
+		}
+	}
+
+	for repo, flag := range repositories {
+		if flag {
+			_, err = client.AddTeamRepository(team.ID, org, repo)
+			if err != nil {
+				return errors.New(fmt.Sprintf("[ERROR] Error adding team repository %q: %s", repo, err))
+			}
+		}
+	}
+
+	return
 }

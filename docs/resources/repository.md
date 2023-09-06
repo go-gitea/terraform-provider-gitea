@@ -21,16 +21,8 @@ Repository migrations have some properties that are not available to regular rep
 ## Example Usage
 
 ```terraform
-resource "gitea_user" "test" {
-  username             = "test"
-  login_name           = "test"
-  password             = "Geheim1!"
-  email                = "test@user.dev"
-  must_change_password = false
-}
-
 resource "gitea_repository" "test" {
-  username     = resource.gitea_user.test.name
+  username     = "lerentis"
   name         = "test"
   private      = true
   issue_labels = "Default"
@@ -39,13 +31,23 @@ resource "gitea_repository" "test" {
 }
 
 resource "gitea_repository" "mirror" {
-  username                     = resource.gitea_user.test.name
+  username                     = "lerentis"
   name                         = "terraform-provider-gitea-mirror"
   description                  = "Mirror of Terraform Provider"
   mirror                       = true
   migration_clone_addresse     = "https://git.uploadfilter24.eu/lerentis/terraform-provider-gitea.git"
   migration_service            = "gitea"
   migration_service_auth_token = var.gitea_mirror_token
+}
+
+resource "gitea_repository" "clone" {
+  username                     = "lerentis"
+  name                         = "terraform-provider-gitea-clone"
+  description                  = "Clone of Terraform Provider"
+  mirror                       = false
+  migration_clone_address      = "https://git.uploadfilter24.eu/lerentis/terraform-provider-gitea.git"
+  migration_service            = "gitea"
+  migration_service_auth_token = var.gitea_clone_token
 }
 ```
 
@@ -80,7 +82,8 @@ Need to exist in the gitea instance
 Need to exist in the gitea instance
 - `license` (String) The license under which the source code of this repository should be.
 Need to exist in the gitea instance
-- `migration_clone_addresse` (String)
+- `migration_clone_address` (String)
+- `migration_clone_addresse` (String) DEPRECATED in favor of `migration_clone_address`
 - `migration_issue_labels` (Boolean)
 - `migration_lfs` (Boolean)
 - `migration_lfs_endpoint` (String)
@@ -99,11 +102,14 @@ Need to exist in the gitea instance
 
 ### Read-Only
 
+- `clone_url` (String)
 - `created` (String)
+- `html_url` (String)
 - `id` (String) The ID of this resource.
 - `permission_admin` (Boolean)
 - `permission_pull` (Boolean)
 - `permission_push` (Boolean)
+- `ssh_url` (String)
 - `updated` (String)
 
 
