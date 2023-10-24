@@ -51,5 +51,3 @@ resource "gitea_git_hook" "org_repo_post_receive" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-

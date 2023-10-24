@@ -43,5 +43,3 @@ description: |-
 - `updated` (String)
 - `watchers` (Number)
 - `website` (String)
-
-

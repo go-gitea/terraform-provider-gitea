@@ -48,5 +48,3 @@ resource "gitea_public_key" "test_user_key" {
 - `fingerprint` (String)
 - `id` (String) The ID of this resource.
 - `type` (String)
-
-

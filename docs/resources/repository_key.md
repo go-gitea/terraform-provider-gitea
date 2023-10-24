@@ -59,5 +59,3 @@ resource "gitea_repository_key" "example" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-

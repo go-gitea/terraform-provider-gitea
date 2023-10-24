@@ -28,5 +28,3 @@ description: |-
 - `location` (String)
 - `visibility` (String)
 - `website` (String)
-
-

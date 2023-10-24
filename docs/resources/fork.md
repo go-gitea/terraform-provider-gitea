@@ -57,5 +57,3 @@ resource "gitea_fork" "org2_fork_of_repo1_in_org1" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-

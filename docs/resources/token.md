@@ -63,5 +63,3 @@ output "token" {
 - `id` (String) The ID of this resource.
 - `last_eight` (String)
 - `token` (String, Sensitive) The actual Access Token
-
-

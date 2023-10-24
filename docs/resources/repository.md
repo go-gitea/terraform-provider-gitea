@@ -111,5 +111,3 @@ Need to exist in the gitea instance
 - `permission_push` (Boolean)
 - `ssh_url` (String)
 - `updated` (String)
-
-

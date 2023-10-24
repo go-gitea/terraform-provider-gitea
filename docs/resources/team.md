@@ -79,5 +79,3 @@ Can be `repo.code`, `repo.issues`, `repo.ext_issues`, `repo.wiki`, `repo.pulls`,
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-

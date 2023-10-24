@@ -13,7 +13,7 @@ terraform {
   required_providers {
     gitea = {
       source = "go-gitea/gitea"
-      version = "0.2.0"
+      version = "0.3.0"
     }
   }
 }
@@ -71,4 +71,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## History
 
 This codebase was created at https://gitea.com/gitea/terraform-provider-gitea, was forked by @lerentis, and then their changes were merged back into the original repo. Thank you to everyone who contributed!
-

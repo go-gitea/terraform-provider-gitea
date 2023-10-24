@@ -29,5 +29,3 @@ description: |-
 - `is_admin` (Boolean)
 - `language` (String)
 - `last_login` (String)
-
-
