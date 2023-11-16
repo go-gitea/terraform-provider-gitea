@@ -69,7 +69,6 @@ resource "gitea_team" "test_team_restricted" {
 - `can_create_repos` (Boolean) Flag if the Teams members should be able to create Rpositories in the Organisation
 - `description` (String) Description of the Team
 - `include_all_repositories` (Boolean) Flag if the Teams members should have access to all Repositories in the Organisation
-- `members` (List of String) List of Users that should be part of this team
 - `permission` (String) Permissions associated with this Team
 Can be `none`, `read`, `write`, `admin` or `owner`
 - `repositories` (List of String) List of Repositories that should be part of this team

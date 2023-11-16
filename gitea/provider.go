@@ -81,6 +81,8 @@ func Provider() *schema.Provider {
 			"gitea_fork":               resourceGiteaFork(),
 			"gitea_public_key":         resourceGiteaPublicKey(),
 			"gitea_team":               resourceGiteaTeam(),
+			"gitea_team_membership":    resourceGiteaTeamMembership(),
+			"gitea_team_members":       resourceGiteaTeamMembers(),
 			"gitea_git_hook":           resourceGiteaGitHook(),
 			"gitea_token":              resourceGiteaToken(),
 			"gitea_repository_key":     resourceGiteaRepositoryKey(),
