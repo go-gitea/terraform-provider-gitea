@@ -5,18 +5,10 @@ provider "gitea" {
   password = var.gitea_password
 }
 
-resource "gitea_user" "test" {
-  username             = "test"
-  login_name           = "test"
-  password             = "Geheim1!"
-  email                = "test@user.dev"
-  must_change_password = false
-  admin                = true
-}
-
+// The token owner is the creator of the token
 resource "gitea_token" "test_token" {
-  username = resource.gitea_user.test.username
-  name     = "test-token"
+  name   = "test_token"
+  scopes = ["all"]
 }
 
 output "token" {

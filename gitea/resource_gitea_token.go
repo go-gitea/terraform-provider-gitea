@@ -9,11 +9,35 @@ import (
 )
 
 const (
-	TokenUsername  string = "username"
 	TokenName      string = "name"
 	TokenHash      string = "token"
 	TokenLastEight string = "last_eight"
+	TokenScopes    string = "scopes"
 )
+
+// validScopes contains the valid scopes for tokens as listed
+// at https://docs.gitea.com/development/oauth2-provider#scopes
+var validScopes = map[string]bool{
+	"all": true,
+	"read:activitypub": true,
+	"write:activitypub": true,
+	"read:admin": true,
+	"write:admin": true,
+	"read:issue": true,
+	"write:issue": true,
+	"read:misc": true,
+	"write:misc": true,
+	"read:notification": true,
+	"write:notification": true,
+	"read:organization": true,
+	"write:organization": true,
+	"read:package": true,
+	"write:package": true,
+	"read:repository": true,
+	"write:repository": true,
+	"read:user": true,
+	"write:user": true,
+}
 
 func searchTokenById(c *gitea.Client, id int64) (res *gitea.AccessToken, err error) {
 	page := 1
@@ -47,10 +71,23 @@ func resourceTokenCreate(d *schema.ResourceData, meta interface{}) (err error) {
 
 	client := meta.(*gitea.Client)
 
-	var opt gitea.CreateAccessTokenOption
-	opt.Name = d.Get(TokenName).(string)
+	// Create a list of valid scopes. Thrown an error if an invalid scope is found
+	var scopes []gitea.AccessTokenScope
+	for _, s := range d.Get(TokenScopes).(*schema.Set).List() {
+		s := s.(string)
+		if validScopes[s] {
+			scopes = append(scopes, gitea.AccessTokenScope(s))
+		} else {
+			return fmt.Errorf("Invalid token scope: '%s'", s)
+		}
+	}
 
-	token, _, err := client.CreateAccessToken(opt)
+	opts := gitea.CreateAccessTokenOption{
+		Name: 	d.Get(TokenName).(string),
+		Scopes: scopes,
+	}
+
+	token, _, err := client.CreateAccessToken(opts)
 
 	if err != nil {
 		return err
@@ -106,6 +143,7 @@ func setTokenResourceData(token *gitea.AccessToken, d *schema.ResourceData) (err
 		d.Set(TokenHash, token.Token)
 	}
 	d.Set(TokenLastEight, token.TokenLastEight)
+	d.Set(TokenScopes, token.Scopes)
 
 	return
 }
@@ -119,12 +157,6 @@ func resourceGiteaToken() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
-			"username": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "The owner of the Access Token",
-			},
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -140,6 +172,15 @@ func resourceGiteaToken() *schema.Resource {
 			"last_eight": {
 				Type:     schema.TypeString,
 				Computed: true,
+			},
+			"scopes": {
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Required:    true,
+				ForceNew:    true,
+				Description: "List of string representations of scopes for the token",
 			},
 		},
 		Description: "`gitea_token` manages gitea Access Tokens.\n\n" +

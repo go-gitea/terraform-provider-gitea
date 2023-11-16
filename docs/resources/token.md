@@ -30,18 +30,10 @@ provider "gitea" {
   password = var.gitea_password
 }
 
-resource "gitea_user" "test" {
-  username             = "test"
-  login_name           = "test"
-  password             = "Geheim1!"
-  email                = "test@user.dev"
-  must_change_password = false
-  admin                = true
-}
-
+// The token owner is the creator of the token
 resource "gitea_token" "test_token" {
-  username = resource.gitea_user.test.username
-  name     = "test-token"
+  name   = "test_token"
+  scopes = ["all"]
 }
 
 output "token" {
@@ -56,7 +48,7 @@ output "token" {
 ### Required
 
 - `name` (String) The name of the Access Token
-- `username` (String) The owner of the Access Token
+- `scopes` (Set of String) List of string representations of scopes for the token
 
 ### Read-Only
 
