@@ -1,22 +1,24 @@
 package gitea
 
 import (
+	"strconv"
+
 	"code.gitea.io/sdk/gitea"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"strconv"
 )
 
 const (
-	repoWebhookUsername     string = "username"
-	repoWebhookName         string = "name"
-	repoWebhookType         string = "type"
-	repoWebhookUrl          string = "url"
-	repoWebhookContentType  string = "content_type"
-	repoWebhookSecret       string = "secret"
-	repoWebhookEvents       string = "events"
-	repoWebhookBranchFilter string = "branch_filter"
-	repoWebhookActive       string = "active"
-	repoWebhookCreatedAt    string = "created_at"
+	repoWebhookUsername            string = "username"
+	repoWebhookName                string = "name"
+	repoWebhookType                string = "type"
+	repoWebhookUrl                 string = "url"
+	repoWebhookContentType         string = "content_type"
+	repoWebhookSecret              string = "secret"
+	repoWebhookAuthorizationHeader string = "authorization_header"
+	repoWebhookEvents              string = "events"
+	repoWebhookBranchFilter        string = "branch_filter"
+	repoWebhookActive              string = "active"
+	repoWebhookCreatedAt           string = "created_at"
 )
 
 func resourceRepositoryWebhookRead(d *schema.ResourceData, meta interface{}) (err error) {
@@ -67,11 +69,12 @@ func resourceRepositoryWebhookCreate(d *schema.ResourceData, meta interface{}) (
 	}
 
 	hookOption := gitea.CreateHookOption{
-		Type:         gitea.HookType(d.Get(repoWebhookType).(string)),
-		Config:       config,
-		Events:       events,
-		BranchFilter: d.Get(repoWebhookBranchFilter).(string),
-		Active:       d.Get(repoWebhookActive).(bool),
+		Type:                gitea.HookType(d.Get(repoWebhookType).(string)),
+		Config:              config,
+		Events:              events,
+		BranchFilter:        d.Get(repoWebhookBranchFilter).(string),
+		Active:              d.Get(repoWebhookActive).(bool),
+		AuthorizationHeader: d.Get(repoWebhookAuthorizationHeader).(string),
 	}
 
 	hook, _, err := client.CreateRepoHook(user, repo, hookOption)
@@ -112,10 +115,11 @@ func resourceRepositoryWebhookUpdate(d *schema.ResourceData, meta interface{}) (
 	active := d.Get(repoWebhookActive).(bool)
 
 	hookOption := gitea.EditHookOption{
-		Config:       config,
-		Events:       events,
-		BranchFilter: d.Get(repoWebhookBranchFilter).(string),
-		Active:       &active,
+		Config:              config,
+		Events:              events,
+		BranchFilter:        d.Get(repoWebhookBranchFilter).(string),
+		Active:              &active,
+		AuthorizationHeader: d.Get(repoWebhookAuthorizationHeader).(string),
 	}
 
 	_, err = client.EditRepoHook(user, repo, id, hookOption)
@@ -170,6 +174,11 @@ func setRepositoryWebhookData(hook *gitea.Hook, d *schema.ResourceData) (err err
 	d.Set(repoWebhookActive, d.Get(repoWebhookActive).(bool))
 	d.Set(repoWebhookCreatedAt, hook.Created)
 
+	authorizationHeader := d.Get(repoWebhookAuthorizationHeader).(string)
+	if authorizationHeader != "" {
+		d.Set(repoWebhookAuthorizationHeader, authorizationHeader)
+	}
+
 	return
 }
 
@@ -211,6 +220,11 @@ func resourceGiteaRepositoryWebhook() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Webhook secret",
+			},
+			"authorization_header": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Webhook authorization header",
 			},
 			"events": {
 				Type: schema.TypeList,

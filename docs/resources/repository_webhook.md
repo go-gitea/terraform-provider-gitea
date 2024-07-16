@@ -28,6 +28,7 @@ This resource allows you to create and manage webhooks for repositories.
 
 ### Optional
 
+- `authorization_header` (String) Webhook authorization header
 - `secret` (String) Webhook secret
 
 ### Read-Only

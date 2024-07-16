@@ -43,7 +43,7 @@ resource "gitea_team_members" "example_members" {
 
 ### Required
 
-- `members` (List of String) The user names of the members of the team.
+- `members` (Set of String) The user names of the members of the team.
 - `team_id` (Number) The ID of the team.
 
 ### Read-Only
