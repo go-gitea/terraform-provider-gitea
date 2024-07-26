@@ -11,8 +11,8 @@ jobs:
     name: 'Terraform Versions'
     runs-on: ubuntu-latest
     steps:
-    - uses: https://github.com/actions/checkout@v3
-    - uses: https://github.com/hashicorp/setup-terraform@v3
+    - uses: actions/checkout@v4
+    - uses: hashicorp/setup-terraform@v3
 
     - name: Terraform fmt
       id: fmt
