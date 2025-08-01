@@ -60,7 +60,7 @@ resource "gitea_team" "test_team_restricted" {
 Can be `none`, `read`, `write`, `admin` or `owner`
 - `repositories` (List of String) List of Repositories that should be part of this team
 - `units` (String) List of types of Repositories that should be allowed to be created from Team members.
-Can be `repo.code`, `repo.issues`, `repo.ext_issues`, `repo.wiki`, `repo.pulls`, `repo.releases`, `repo.projects` and/or `repo.ext_wiki`
+Can be `repo.code`, `repo.issues`, `repo.ext_issues`, `repo.wiki`, `repo.pulls`, `repo.releases`, `repo.projects`, `repo.ext_wiki` and/or `repo.actions`
 
 ### Read-Only
 
