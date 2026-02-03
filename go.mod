@@ -6,7 +6,7 @@ toolchain go1.25.6
 
 require (
 	code.gitea.io/sdk/gitea v0.23.2
-	github.com/hashicorp/terraform-plugin-docs v0.22.0
+	github.com/hashicorp/terraform-plugin-docs v0.24.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.38.2
 )
@@ -23,7 +23,7 @@ require (
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/bgentry/speakeasy v0.1.0 // indirect
-	github.com/bmatcuk/doublestar/v4 v4.8.1 // indirect
+	github.com/bmatcuk/doublestar/v4 v4.9.1 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/davidmz/go-pageant v1.0.2 // indirect
 	github.com/fatih/color v1.16.0 // indirect
