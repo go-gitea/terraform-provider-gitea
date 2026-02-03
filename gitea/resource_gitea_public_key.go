@@ -3,6 +3,7 @@ package gitea
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -18,6 +19,23 @@ const (
 	PublicKeyCreated      string = "created"
 	PublicKeyType         string = "type"
 )
+
+// normalizeSSHKey standardizes SSH key format for consistent comparison
+func normalizeSSHKey(key string) string {
+	// Remove leading/trailing whitespace
+	normalized := strings.TrimSpace(key)
+	// Normalize line endings to Unix format
+	normalized = strings.ReplaceAll(normalized, "\r\n", "\n")
+	normalized = strings.ReplaceAll(normalized, "\r", "\n")
+	// Remove any trailing newlines
+	normalized = strings.TrimRight(normalized, "\n")
+	return normalized
+}
+
+// sshKeyDiffSuppressFunc compares SSH keys after normalization
+func sshKeyDiffSuppressFunc(k, old, new string, d *schema.ResourceData) bool {
+	return normalizeSSHKey(old) == normalizeSSHKey(new)
+}
 
 func resourcePublicKeyRead(d *schema.ResourceData, meta interface{}) (err error) {
 	client := meta.(*gitea.Client)
@@ -117,11 +135,12 @@ func resourceGiteaPublicKey() *schema.Resource {
 				Description: "Title of the key to add",
 			},
 			"key": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Sensitive:   true,
-				Description: "An armored SSH key to add",
+				Type:             schema.TypeString,
+				Required:         true,
+				ForceNew:         true,
+				Sensitive:        true,
+				Description:      "An armored SSH key to add",
+				DiffSuppressFunc: sshKeyDiffSuppressFunc,
 			},
 			"read_only": {
 				Type:        schema.TypeBool,

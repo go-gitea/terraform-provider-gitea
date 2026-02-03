@@ -16,6 +16,23 @@ const (
 	deployKeyReadOnly string = "read_only"
 )
 
+// normalizeSSHKey standardizes SSH key format for consistent comparison
+func normalizeSSHKeyForRepo(key string) string {
+	// Remove leading/trailing whitespace
+	normalized := strings.TrimSpace(key)
+	// Normalize line endings to Unix format
+	normalized = strings.ReplaceAll(normalized, "\r\n", "\n")
+	normalized = strings.ReplaceAll(normalized, "\r", "\n")
+	// Remove any trailing newlines
+	normalized = strings.TrimRight(normalized, "\n")
+	return normalized
+}
+
+// sshKeyDiffSuppressFuncForRepo compares SSH keys after normalization
+func sshKeyDiffSuppressFuncForRepo(k, old, new string, d *schema.ResourceData) bool {
+	return normalizeSSHKeyForRepo(old) == normalizeSSHKeyForRepo(new)
+}
+
 func resourceRepoKeyIdParts(d *schema.ResourceData) (bool, int64, int64, error) {
 	parts := strings.Split(d.Id(), "/")
 	if len(parts) != 2 {
@@ -143,10 +160,11 @@ func resourceGiteaRepositoryKey() *schema.Resource {
 				Description: "The ID of the repository where the deploy key belongs to",
 			},
 			deployKeyKey: {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "Armored SSH key to add",
+				Type:             schema.TypeString,
+				Required:         true,
+				ForceNew:         true,
+				Description:      "Armored SSH key to add",
+				DiffSuppressFunc: sshKeyDiffSuppressFuncForRepo,
 			},
 			deployKeyReadOnly: {
 				Type:        schema.TypeBool,
