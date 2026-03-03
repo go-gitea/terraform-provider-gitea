@@ -78,6 +78,9 @@ func resourceTeamCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	if strings.Contains(d.Get(TeamUnits).(string), "repo.actions") {
 		units = append(units, gitea.RepoUnitActions)
 	}
+	if strings.Contains(d.Get(TeamUnits).(string), "repo.packages") {
+		units = append(units, gitea.RepoUnitPackages)
+	}
 
 	includeAllRepos := d.Get(TeamIncludeAllReposFlag).(bool)
 
@@ -158,6 +161,9 @@ func resourceTeamUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 	if strings.Contains(d.Get(TeamUnits).(string), "repo.actions") {
 		units = append(units, gitea.RepoUnitActions)
+	}
+	if strings.Contains(d.Get(TeamUnits).(string), "repo.packages") {
+		units = append(units, gitea.RepoUnitPackages)
 	}
 
 	opts := gitea.EditTeamOption{
@@ -283,9 +289,9 @@ func resourceGiteaTeam() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: false,
 				Optional: true,
-				Default:  "[repo.code, repo.issues, repo.ext_issues, repo.wiki, repo.pulls, repo.releases, repo.projects, repo.ext_wiki, repo.actions]",
+				Default:  "[repo.code, repo.issues, repo.ext_issues, repo.wiki, repo.pulls, repo.releases, repo.projects, repo.ext_wiki, repo.actions, repo.packages]",
 				Description: "List of types of Repositories that should be allowed to be created from Team members.\n" +
-					"Can be `repo.code`, `repo.issues`, `repo.ext_issues`, `repo.wiki`, `repo.pulls`, `repo.releases`, `repo.projects`, `repo.ext_wiki` and/or `repo.actions`",
+					"Can be `repo.code`, `repo.issues`, `repo.ext_issues`, `repo.wiki`, `repo.pulls`, `repo.releases`, `repo.projects`, `repo.ext_wiki`, `repo.actions` and/or `repo.packages`",
 			},
 			"repositories": {
 				Type: schema.TypeList,
