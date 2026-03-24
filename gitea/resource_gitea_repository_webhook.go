@@ -1,7 +1,10 @@
 package gitea
 
 import (
+	"context"
+	"fmt"
 	"strconv"
+	"strings"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -188,6 +191,18 @@ func resourceGiteaRepositoryWebhook() *schema.Resource {
 		Create: resourceRepositoryWebhookCreate,
 		Update: resourceRepositoryWebhookUpdate,
 		Delete: resourceRepositoryWebhookDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: func(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+				parts := strings.Split(d.Id(), "/")
+				if len(parts) != 3 {
+					return nil, fmt.Errorf("unexpected ID format (%q), expected <username>/<repo>/<webhook_id>", d.Id())
+				}
+				d.Set("username", parts[0])
+				d.Set("name", parts[1])
+				d.SetId(parts[2])
+				return []*schema.ResourceData{d}, nil
+			},
+		},
 		Schema: map[string]*schema.Schema{
 			"username": {
 				Type:        schema.TypeString,
