@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -52,6 +53,8 @@ const (
 	migrationMirrorInterval      string = "migration_mirror_interval"
 	migrationLFS                 string = "migration_lfs"
 	migrationLFSEndpoint         string = "migration_lfs_endpoint"
+	repoSourceTemplate           string = "source_template"
+	repoSourceTemplateItems      string = "source_template_items"
 )
 
 func searchUserByName(c *gitea.Client, name string) (res *gitea.User, err error) {
@@ -172,6 +175,30 @@ func resourceRepoCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 
 		repo, _, err = client.MigrateRepo(opts)
+
+	} else if d.Get(repoSourceTemplate) != "" {
+		repoSource := strings.Split(d.Get(repoSourceTemplate).(string), "/")
+		if len(repoSource) != 2 {
+			return errors.New("Invalid source template format")
+		}
+
+		// No items will return an API error
+		templateItems := d.Get(repoSourceTemplateItems).([]interface{})
+
+		opts := gitea.CreateRepoFromTemplateOption{
+			Name:        d.Get(repoName).(string),
+			Owner:       d.Get(repoOwner).(string),
+			Description: d.Get(repoDescription).(string),
+			Private:     d.Get(repoPrivateFlag).(bool),
+			GitContent:  slices.Contains(templateItems, "gitcontent"),
+			GitHooks:    slices.Contains(templateItems, "githooks"),
+			Webhooks:    slices.Contains(templateItems, "webhooks"),
+			Topics:      slices.Contains(templateItems, "topics"),
+			Avatar:      slices.Contains(templateItems, "avatar"),
+			Labels:      slices.Contains(templateItems, "labels"),
+		}
+
+		repo, _, err = client.CreateRepoFromTemplate(repoSource[0], repoSource[1], opts)
 
 	} else {
 		opts := gitea.CreateRepoOption{
@@ -675,6 +702,22 @@ func resourceGiteaRepository() *schema.Resource {
 			"ssh_url": {
 				Type:     schema.TypeString,
 				Computed: true,
+			},
+			"source_template": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The name of the template repository in format <owner>/<repository_name>",
+			},
+			"source_template_items": {
+				Type:     schema.TypeList,
+				Optional: true,
+				ForceNew: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "List of items that will be used from the template." +
+					"Possible values are `gitcontent`, `githooks`, `webhooks`, `topics`, `avatar`, `labels`",
 			},
 		},
 		Description: "`gitea_repository` manages a gitea repository.\n\n" +
