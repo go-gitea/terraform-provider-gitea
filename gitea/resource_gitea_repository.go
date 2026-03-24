@@ -259,7 +259,16 @@ func resourceRepoUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		opts.Archived = &archived
 	}
 
-	repo, _, err = client.EditRepo(d.Get(repoOwner).(string), d.Get(repoName).(string), opts)
+	currentRepoName := ""
+	if d.HasChange(repoName) {
+		oldVal, newVal := d.GetChange(repoName)
+		log.Printf("[DEBUG] name changed from %v to %v", oldVal, newVal)
+		currentRepoName = (oldVal).(string)
+	} else {
+		currentRepoName = d.Get(repoName).(string)
+	}
+
+	repo, _, err = client.EditRepo(d.Get(repoOwner).(string), currentRepoName, opts)
 
 	if err != nil {
 		return err
@@ -267,7 +276,6 @@ func resourceRepoUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	err = setRepoResourceData(repo, d)
 
 	return
-
 }
 
 func resourceRepoDelete(d *schema.ResourceData, meta interface{}) (err error) {
@@ -396,7 +404,7 @@ func resourceGiteaRepository() *schema.Resource {
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
+				ForceNew:    false,
 				Description: "The Name of the repository",
 			},
 			"auto_init": {
