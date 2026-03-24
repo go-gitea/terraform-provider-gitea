@@ -91,6 +91,7 @@ func Provider() *schema.Provider {
 			"gitea_repository_branch_protection": resourceGiteaRepositoryBranchProtection(),
 			"gitea_repository_actions_variable":  resourceGiteaRepositoryActionsVariable(),
 			"gitea_repository_actions_secret":    resourceGiteaRepositoryActionsSecret(),
+			"gitea_repository_collaborator":      resourceGiteaRepositoryCollaborator(),
 		},
 
 		ConfigureFunc: providerConfigure,
