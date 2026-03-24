@@ -4,14 +4,17 @@ page_title: "gitea_user Resource - terraform-provider-gitea"
 subcategory: ""
 description: |-
   gitea_user manages a native gitea user.
-  If you are using OIDC or other kinds of authentication mechanisms you can still try to managessh keys or other ressources this way
+  If you are using OIDC or other kinds of authentication mechanisms you can still try to managessh keys or other ressources this way.
+  Import requires password to remain configured because Gitea does not return passwords.
 ---
 
 # gitea_user (Resource)
 
 `gitea_user` manages a native gitea user.
 
-If you are using OIDC or other kinds of authentication mechanisms you can still try to managessh keys or other ressources this way
+If you are using OIDC or other kinds of authentication mechanisms you can still try to managessh keys or other ressources this way.
+
+Import requires `password` to remain configured because Gitea does not return passwords.
 
 ## Example Usage
 

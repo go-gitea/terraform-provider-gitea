@@ -97,8 +97,8 @@ func TestAccGiteaRepositoryCollaborator_basic(t *testing.T) {
 			},
 			{
 				ResourceName:      "gitea_repository_collaborator.test",
-				ImportState:        true,
-				ImportStateVerify:  true,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})

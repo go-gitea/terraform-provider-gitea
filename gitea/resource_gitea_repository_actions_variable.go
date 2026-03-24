@@ -180,16 +180,3 @@ func resourceGiteaRepositoryActionsVariableDelete(d *schema.ResourceData, meta i
 
 	return err
 }
-
-// format the strings into an id `a:b:c`
-func buildThreePartID(a, b, c string) string {
-	return fmt.Sprintf("%s:%s:%s", a, b, c)
-}
-func parseThreePartID(id, left, center, right string) (string, string, string, error) {
-	parts := strings.SplitN(id, ":", 3)
-	if len(parts) != 3 {
-		return "", "", "", fmt.Errorf("unexpected ID format (%q). Expected %s:%s:%s", id, left, center, right)
-	}
-
-	return parts[0], parts[1], parts[2], nil
-}

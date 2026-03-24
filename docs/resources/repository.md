@@ -118,6 +118,8 @@ Need to exist in the gitea instance
 - `private` (Boolean) Flag if the repository should be private or not.
 - `readme` (String)
 - `repo_template` (Boolean)
+- `source_template` (String) The name of the template repository in format <owner>/<repository_name>
+- `source_template_items` (List of String) List of items that will be used from the template.Possible values are `gitcontent`, `githooks`, `webhooks`, `topics`, `avatar`, `labels`
 - `website` (String) A link to a website with more information.
 
 ### Read-Only

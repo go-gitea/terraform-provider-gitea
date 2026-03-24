@@ -3,12 +3,17 @@
 page_title: "gitea_repository_actions_secret Resource - terraform-provider-gitea"
 subcategory: ""
 description: |-
-  
+  gitea_repository_actions_secret manages a repository actions secret.
+  Import expects the resource ID in the form owner:repository:secret_name.
+  Because Gitea does not return secret values, secret_value must still be configured when importing.
 ---
 
 # gitea_repository_actions_secret (Resource)
 
+`gitea_repository_actions_secret` manages a repository actions secret.
 
+Import expects the resource ID in the form `owner:repository:secret_name`.
+Because Gitea does not return secret values, `secret_value` must still be configured when importing.
 
 
 

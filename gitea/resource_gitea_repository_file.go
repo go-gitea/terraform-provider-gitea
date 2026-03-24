@@ -89,35 +89,37 @@ func resourceRepositoryFileRead(d *schema.ResourceData, meta interface{}) (err e
 		}
 	}
 
-	commit, resp, err := client.GetSingleCommit(username, name, content.LastCommitSha)
-	if err != nil {
-		return err
-	}
-	if resp != nil && resp.StatusCode != 200 {
-		return fmt.Errorf("error getting commit from repository: %s", resp.Status)
-	}
-
-	// Prefer committer/author date; CommitMeta.Created is often zero
-	created := time.Time{}
-	if commit.RepoCommit != nil {
-		if commit.RepoCommit.Committer != nil {
-			if t, ok := parseRFC3339Maybe(commit.RepoCommit.Committer.Date); ok {
-				created = t
-			}
-		}
-		if created.IsZero() && commit.RepoCommit.Author != nil {
-			if t, ok := parseRFC3339Maybe(commit.RepoCommit.Author.Date); ok {
-				created = t
-			}
-		}
-	}
-	if created.IsZero() {
-		created = commit.Created
-	}
-
 	result := &gitea.FileResponse{
 		Content: content,
-		Commit: &gitea.FileCommitResponse{
+	}
+	if content.LastCommitSha != nil && *content.LastCommitSha != "" {
+		commit, resp, err := client.GetSingleCommit(username, name, *content.LastCommitSha)
+		if err != nil {
+			return err
+		}
+		if resp != nil && resp.StatusCode != 200 {
+			return fmt.Errorf("error getting commit from repository: %s", resp.Status)
+		}
+
+		// Prefer committer/author date; CommitMeta.Created is often zero
+		created := time.Time{}
+		if commit.RepoCommit != nil {
+			if commit.RepoCommit.Committer != nil {
+				if t, ok := parseRFC3339Maybe(commit.RepoCommit.Committer.Date); ok {
+					created = t
+				}
+			}
+			if created.IsZero() && commit.RepoCommit.Author != nil {
+				if t, ok := parseRFC3339Maybe(commit.RepoCommit.Author.Date); ok {
+					created = t
+				}
+			}
+		}
+		if created.IsZero() {
+			created = commit.Created
+		}
+
+		result.Commit = &gitea.FileCommitResponse{
 			CommitMeta: gitea.CommitMeta{
 				URL:     commit.URL,
 				SHA:     commit.SHA,
@@ -129,7 +131,7 @@ func resourceRepositoryFileRead(d *schema.ResourceData, meta interface{}) (err e
 			Parents:   commit.Parents,
 			Message:   commit.RepoCommit.Message,
 			Tree:      commit.RepoCommit.Tree,
-		},
+		}
 	}
 	err = setRepositoryFileResourceData(result, d)
 
@@ -366,7 +368,11 @@ func setRepositoryFileResourceData(response *gitea.FileResponse, d *schema.Resou
 		response.Content.Path,
 	))
 	d.Set("file_sha", response.Content.SHA)
-	d.Set("last_commit_sha", response.Commit.SHA)
+	lastCommitSHA := ""
+	if response.Commit != nil {
+		lastCommitSHA = response.Commit.SHA
+	}
+	d.Set("last_commit_sha", lastCommitSHA)
 	d.Set("size", response.Content.Size)
 	// Preserve the user-provided commit_message in state to avoid perpetual diffs
 	if v, ok := d.GetOk("commit_message"); ok {

@@ -86,18 +86,20 @@ func dataSourceGiteaRepositoryFileRead(d *schema.ResourceData, meta interface{})
 		return err
 	}
 
-	commit, resp, err := client.GetSingleCommit(owner, repo, content.LastCommitSha)
-	if err != nil {
-		return err
-	}
-	if resp != nil && resp.StatusCode >= 400 {
-		return fmt.Errorf("error getting commit: %s", resp.Status)
-	}
-
 	// Build a FileResponse-like structure to reuse state setter
 	result := &gitea.FileResponse{
 		Content: content,
-		Commit: &gitea.FileCommitResponse{
+	}
+	if content.LastCommitSha != nil && *content.LastCommitSha != "" {
+		commit, resp, err := client.GetSingleCommit(owner, repo, *content.LastCommitSha)
+		if err != nil {
+			return err
+		}
+		if resp != nil && resp.StatusCode >= 400 {
+			return fmt.Errorf("error getting commit: %s", resp.Status)
+		}
+
+		result.Commit = &gitea.FileCommitResponse{
 			CommitMeta: gitea.CommitMeta{
 				URL:     commit.URL,
 				SHA:     commit.SHA,
@@ -109,7 +111,7 @@ func dataSourceGiteaRepositoryFileRead(d *schema.ResourceData, meta interface{})
 			Parents:   commit.Parents,
 			Message:   commit.RepoCommit.Message,
 			Tree:      commit.RepoCommit.Tree,
-		},
+		}
 	}
 
 	// Set a stable ID

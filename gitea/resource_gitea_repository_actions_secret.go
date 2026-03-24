@@ -82,8 +82,7 @@ func resourceGiteaRepositoryActionsSecretCreate(d *schema.ResourceData, meta int
 	}
 	value := valueData.(string)
 
-	_, err := client.CreateRepoActionSecret(repoOwner, repository, gitea.CreateSecretOption{
-		Name: secretName,
+	_, err := client.CreateRepoActionSecret(repoOwner, repository, secretName, gitea.CreateOrUpdateSecretOption{
 		Data: value,
 	})
 	if err != nil {
@@ -122,8 +121,7 @@ func resourceGiteaRepositoryActionsSecretUpdate(d *schema.ResourceData, meta int
 	}
 	value := valueData.(string)
 
-	_, err := client.CreateRepoActionSecret(repoOwner, repository, gitea.CreateSecretOption{
-		Name: variableName,
+	_, err := client.CreateRepoActionSecret(repoOwner, repository, variableName, gitea.CreateOrUpdateSecretOption{
 		Data: value,
 	})
 	if err != nil {
