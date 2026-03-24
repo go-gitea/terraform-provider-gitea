@@ -1,7 +1,10 @@
 package gitea
 
 import (
+	"context"
+	"fmt"
 	"log"
+	"strings"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -275,7 +278,18 @@ func resourceGiteaRepositoryBranchProtection() *schema.Resource {
 		Create: resourceRepositoryBranchProtectionCreate,
 		Update: resourceRepositoryBranchProtectionUpdate,
 		Delete: resourceRepositoryBranchProtectionDelete,
-		// TODO: importer ?
+		Importer: &schema.ResourceImporter{
+			StateContext: func(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+				parts := strings.Split(d.Id(), "/")
+				if len(parts) != 3 {
+					return nil, fmt.Errorf("unexpected ID format (%q), expected <username>/<repo>/<rule_name>", d.Id())
+				}
+				d.Set("username", parts[0])
+				d.Set("name", parts[1])
+				d.Set("rule_name", parts[2])
+				return []*schema.ResourceData{d}, nil
+			},
+		},
 		Schema: map[string]*schema.Schema{
 			"username": {
 				Type:        schema.TypeString,
