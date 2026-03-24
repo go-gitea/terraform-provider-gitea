@@ -37,7 +37,7 @@ func resourceRepositoryWebhookRead(d *schema.ResourceData, meta interface{}) (er
 
 	hook, resp, err := client.GetRepoHook(user, repo, id)
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			d.SetId("")
 			return
 		} else {
@@ -163,26 +163,37 @@ func setRepositoryWebhookData(hook *gitea.Hook, d *schema.ResourceData) (err err
 
 	d.Set(repoWebhookUsername, d.Get(repoWebhookUsername).(string))
 	d.Set(repoWebhookName, d.Get(repoWebhookName).(string))
-	d.Set(repoWebhookType, d.Get(repoWebhookType).(string))
-	d.Set(repoWebhookUrl, d.Get(repoWebhookUrl).(string))
-	d.Set(repoWebhookContentType, d.Get(repoWebhookContentType).(string))
+	d.Set(repoWebhookType, hook.Type)
+	d.Set(repoWebhookUrl, hookConfigValue(hook, "url"))
+	d.Set(repoWebhookContentType, hookConfigValue(hook, "content_type"))
 
 	secret := d.Get(repoWebhookSecret).(string)
 	if secret != "" {
 		d.Set(repoWebhookSecret, secret)
 	}
 
-	d.Set(repoWebhookEvents, d.Get(repoWebhookEvents))
-	d.Set(repoWebhookBranchFilter, d.Get(repoWebhookBranchFilter).(string))
-	d.Set(repoWebhookActive, d.Get(repoWebhookActive).(bool))
+	d.Set(repoWebhookEvents, stringSliceToInterfaceSlice(hook.Events))
+	d.Set(repoWebhookBranchFilter, hook.BranchFilter)
+	d.Set(repoWebhookActive, hook.Active)
 	d.Set(repoWebhookCreatedAt, hook.Created)
-
-	authorizationHeader := d.Get(repoWebhookAuthorizationHeader).(string)
-	if authorizationHeader != "" {
-		d.Set(repoWebhookAuthorizationHeader, authorizationHeader)
-	}
+	d.Set(repoWebhookAuthorizationHeader, hook.AuthorizationHeader)
 
 	return
+}
+
+func hookConfigValue(hook *gitea.Hook, key string) string {
+	if hook == nil || hook.Config == nil {
+		return ""
+	}
+	return hook.Config[key]
+}
+
+func stringSliceToInterfaceSlice(values []string) []interface{} {
+	result := make([]interface{}, 0, len(values))
+	for _, value := range values {
+		result = append(result, value)
+	}
+	return result
 }
 
 func resourceGiteaRepositoryWebhook() *schema.Resource {

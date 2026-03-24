@@ -1,8 +1,10 @@
 package gitea
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -18,6 +20,8 @@ const (
 	RepoAdminChangeTeamAccess string = "repo_admin_change_team_access"
 	orgRepos                  string = "org_repos"
 )
+
+var errOrganizationNotFound = errors.New("organization not found")
 
 // might come in handy if we want to stick to numeric IDs
 func searchOrgByClientId(c *gitea.Client, id int64) (res *gitea.Organization, err error) {
@@ -35,7 +39,7 @@ func searchOrgByClientId(c *gitea.Client, id int64) (res *gitea.Organization, er
 		}
 
 		if len(orgs) == 0 {
-			return nil, fmt.Errorf("Organisation with ID %d could not be found", id)
+			return nil, errOrganizationNotFound
 		}
 
 		for _, org := range orgs {
@@ -83,7 +87,10 @@ func resourceOrgRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 	org, err = searchOrgByClientId(client, id)
 	if err != nil {
-		d.SetId("")
+		if errors.Is(err, errOrganizationNotFound) || strings.Contains(err.Error(), "could not be found") {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 
@@ -132,8 +139,8 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 
 	org, resp, err = client.GetOrg(d.Get(orgName).(string))
 	if err != nil {
-		if resp.StatusCode == 404 {
-			resourceOrgCreate(d, meta)
+		if resp != nil && resp.StatusCode == 404 {
+			return resourceOrgCreate(d, meta)
 		} else {
 			return err
 		}
@@ -147,11 +154,28 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		Visibility:  gitea.VisibleType(d.Get(orgVisibility).(string)),
 	}
 
-	client.EditOrg(d.Get(orgName).(string), opts)
+	resp, err = client.EditOrg(d.Get(orgName).(string), opts)
+	if err != nil {
+		if resp != nil && resp.StatusCode == 404 {
+			d.SetId("")
+			return nil
+		}
+		return err
+	}
 
 	org, resp, err = client.GetOrg(d.Get(orgName).(string))
+	if err != nil {
+		if resp != nil && resp.StatusCode == 404 {
+			d.SetId("")
+			return nil
+		}
+		return err
+	}
 
-	repos, _ := getAllOrgRepos(client, org.UserName)
+	repos, err := getAllOrgRepos(client, org.UserName)
+	if err != nil {
+		return err
+	}
 	err = setOrgResourceData(org, d, &repos)
 	if err != nil {
 		return err
@@ -166,7 +190,7 @@ func resourceOrgDelete(d *schema.ResourceData, meta interface{}) (err error) {
 
 	resp, err = client.DeleteOrg(d.Get(orgName).(string))
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			return
 		} else {
 			return err

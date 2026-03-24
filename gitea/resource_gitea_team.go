@@ -3,6 +3,7 @@ package gitea
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -32,7 +33,7 @@ func resourceTeamRead(d *schema.ResourceData, meta interface{}) (err error) {
 	team, resp, err = client.GetTeam(id)
 
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			d.SetId("")
 			return nil
 		} else {
@@ -40,7 +41,12 @@ func resourceTeamRead(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	}
 
-	err = setTeamResourceData(team, d, meta)
+	repositories, err := getTeamRepositoryNames(client, team.ID)
+	if err != nil {
+		return err
+	}
+
+	err = setTeamResourceData(team, repositories, d)
 
 	return
 }
@@ -106,7 +112,12 @@ func resourceTeamCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	}
 
-	err = setTeamResourceData(team, d, meta)
+	repositories, err := getTeamRepositoryNames(client, team.ID)
+	if err != nil {
+		return err
+	}
+
+	err = setTeamResourceData(team, repositories, d)
 
 	return
 }
@@ -122,8 +133,8 @@ func resourceTeamUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	team, resp, err = client.GetTeam(id)
 
 	if err != nil {
-		if resp.StatusCode == 404 {
-			resourceTeamCreate(d, meta)
+		if resp != nil && resp.StatusCode == 404 {
+			return resourceTeamCreate(d, meta)
 		} else {
 			return err
 		}
@@ -188,9 +199,17 @@ func resourceTeamUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	}
 
-	team, _, _ = client.GetTeam(id)
+	team, _, err = client.GetTeam(id)
+	if err != nil {
+		return err
+	}
 
-	err = setTeamResourceData(team, d, meta)
+	repositories, err := getTeamRepositoryNames(client, team.ID)
+	if err != nil {
+		return err
+	}
+
+	err = setTeamResourceData(team, repositories, d)
 
 	return
 }
@@ -205,7 +224,7 @@ func resourceTeamDelete(d *schema.ResourceData, meta interface{}) (err error) {
 	resp, err = client.DeleteTeam(id)
 
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			return
 		} else {
 			return err
@@ -215,12 +234,11 @@ func resourceTeamDelete(d *schema.ResourceData, meta interface{}) (err error) {
 	return
 }
 
-func setTeamResourceData(team *gitea.Team, d *schema.ResourceData, meta interface{}) (err error) {
-	client := meta.(*gitea.Client)
-	if err := client.CheckServerVersionConstraint(">= 1.19.4"); err != nil {
-		d.Set(TeamOrg, d.Get(TeamOrg).(string))
-	} else {
+func setTeamResourceData(team *gitea.Team, repositories []string, d *schema.ResourceData) (err error) {
+	if team.Organization != nil {
 		d.Set(TeamOrg, team.Organization.UserName)
+	} else if org, ok := d.GetOk(TeamOrg); ok {
+		d.Set(TeamOrg, org.(string))
 	}
 	d.SetId(fmt.Sprintf("%d", team.ID))
 	d.Set(TeamCreateRepoFlag, team.CanCreateOrgRepo)
@@ -228,10 +246,40 @@ func setTeamResourceData(team *gitea.Team, d *schema.ResourceData, meta interfac
 	d.Set(TeamName, team.Name)
 	d.Set(TeamPermissions, string(team.Permission))
 	d.Set(TeamIncludeAllReposFlag, team.IncludesAllRepositories)
-	d.Set(TeamUnits, d.Get(TeamUnits).(string))
-	d.Set(TeamRepositories, d.Get(TeamRepositories))
+	d.Set(TeamUnits, fmt.Sprintf("%v", team.Units))
+	repositories = append([]string(nil), repositories...)
+	sort.Strings(repositories)
+	d.Set(TeamRepositories, stringSliceToInterfaceSlice(repositories))
 
 	return
+}
+
+func getTeamRepositoryNames(client *gitea.Client, teamID int64) ([]string, error) {
+	repositories := make([]string, 0)
+	page := 1
+
+	for {
+		pageRepos, _, err := client.ListTeamRepositories(teamID, gitea.ListTeamRepositoriesOptions{
+			ListOptions: gitea.ListOptions{
+				Page:     page,
+				PageSize: 50,
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+		if len(pageRepos) == 0 {
+			break
+		}
+
+		for _, repo := range pageRepos {
+			repositories = append(repositories, repo.Name)
+		}
+		page++
+	}
+
+	sort.Strings(repositories)
+	return repositories, nil
 }
 
 func resourceGiteaTeam() *schema.Resource {

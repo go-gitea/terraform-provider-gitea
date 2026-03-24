@@ -1,6 +1,7 @@
 package gitea
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -15,28 +16,30 @@ const (
 	TokenScopes    string = "scopes"
 )
 
+var errTokenNotFound = errors.New("token not found")
+
 // validScopes contains the valid scopes for tokens as listed
 // at https://docs.gitea.com/development/oauth2-provider#scopes
 var validScopes = map[string]bool{
-	"all": true,
-	"read:activitypub": true,
-	"write:activitypub": true,
-	"read:admin": true,
-	"write:admin": true,
-	"read:issue": true,
-	"write:issue": true,
-	"read:misc": true,
-	"write:misc": true,
-	"read:notification": true,
+	"all":                true,
+	"read:activitypub":   true,
+	"write:activitypub":  true,
+	"read:admin":         true,
+	"write:admin":        true,
+	"read:issue":         true,
+	"write:issue":        true,
+	"read:misc":          true,
+	"write:misc":         true,
+	"read:notification":  true,
 	"write:notification": true,
-	"read:organization": true,
+	"read:organization":  true,
 	"write:organization": true,
-	"read:package": true,
-	"write:package": true,
-	"read:repository": true,
-	"write:repository": true,
-	"read:user": true,
-	"write:user": true,
+	"read:package":       true,
+	"write:package":      true,
+	"read:repository":    true,
+	"write:repository":   true,
+	"read:user":          true,
+	"write:user":         true,
 }
 
 func searchTokenById(c *gitea.Client, id int64) (res *gitea.AccessToken, err error) {
@@ -54,7 +57,7 @@ func searchTokenById(c *gitea.Client, id int64) (res *gitea.AccessToken, err err
 		}
 
 		if len(tokens) == 0 {
-			return nil, fmt.Errorf("Token with ID %d could not be found", id)
+			return nil, errTokenNotFound
 		}
 
 		for _, token := range tokens {
@@ -83,7 +86,7 @@ func resourceTokenCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 
 	opts := gitea.CreateAccessTokenOption{
-		Name: 	d.Get(TokenName).(string),
+		Name:   d.Get(TokenName).(string),
 		Scopes: scopes,
 	}
 
@@ -109,6 +112,10 @@ func resourceTokenRead(d *schema.ResourceData, meta interface{}) (err error) {
 	token, err = searchTokenById(client, id)
 
 	if err != nil {
+		if errors.Is(err, errTokenNotFound) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 
@@ -122,10 +129,14 @@ func resourceTokenDelete(d *schema.ResourceData, meta interface{}) (err error) {
 	client := meta.(*gitea.Client)
 	var resp *gitea.Response
 
-	resp, err = client.DeleteAccessToken(d.Get(TokenName).(string))
+	if id, parseErr := strconv.ParseInt(d.Id(), 10, 64); parseErr == nil {
+		resp, err = client.DeleteAccessToken(id)
+	} else {
+		resp, err = client.DeleteAccessToken(d.Get(TokenName).(string))
+	}
 
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			return
 		} else {
 			return err

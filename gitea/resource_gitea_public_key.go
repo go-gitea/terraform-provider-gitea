@@ -48,7 +48,7 @@ func resourcePublicKeyRead(d *schema.ResourceData, meta interface{}) (err error)
 	pubKey, resp, err = client.GetPublicKey(id)
 
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			d.SetId("")
 			return nil
 		} else {
@@ -81,9 +81,10 @@ func resourcePublicKeyCreate(d *schema.ResourceData, meta interface{}) (err erro
 
 func resourcePublicKeyUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	// update = recreate
-	resourcePublicKeyDelete(d, meta)
-	resourcePublicKeyCreate(d, meta)
-	return
+	if err = resourcePublicKeyDelete(d, meta); err != nil {
+		return err
+	}
+	return resourcePublicKeyCreate(d, meta)
 }
 
 func resourcePublicKeyDelete(d *schema.ResourceData, meta interface{}) (err error) {
@@ -96,7 +97,7 @@ func resourcePublicKeyDelete(d *schema.ResourceData, meta interface{}) (err erro
 	resp, err = client.AdminDeleteUserPublicKey(d.Get(PublicKeyUser).(string), int(id))
 
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			return
 		} else {
 			return err

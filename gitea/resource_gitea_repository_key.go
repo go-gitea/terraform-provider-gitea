@@ -64,7 +64,7 @@ func resourceRepoKeyRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 	repo, resp, err := client.GetRepoByID(repoId)
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			d.SetId("")
 			return nil
 		} else {
@@ -74,7 +74,7 @@ func resourceRepoKeyRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 	key, resp, err := client.GetDeployKey(repo.Owner.UserName, repo.Name, keyId)
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			d.SetId("")
 			return nil
 		} else {
@@ -124,14 +124,22 @@ func respurceRepoKeyDelete(d *schema.ResourceData, meta interface{}) (err error)
 
 	repo, resp, err := client.GetRepoByID(repoId)
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			d.SetId("")
 			return nil
 		}
 		return err
 	}
 
-	client.DeleteDeployKey(repo.Owner.UserName, repo.Name, keyId)
+	resp, err = client.DeleteDeployKey(repo.Owner.UserName, repo.Name, keyId)
+	if err != nil {
+		if resp != nil && resp.StatusCode == 404 {
+			d.SetId("")
+			return nil
+		}
+		return err
+	}
+
 	return nil
 }
 

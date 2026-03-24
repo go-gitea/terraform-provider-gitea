@@ -128,7 +128,7 @@ func resourceGiteaRepositoryActionsVariableRead(d *schema.ResourceData, meta int
 	variable, resp, err := client.GetRepoActionVariable(repoOwner, repository, variableName)
 
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			d.SetId("")
 			return nil
 		} else {

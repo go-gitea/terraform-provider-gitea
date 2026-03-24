@@ -40,7 +40,7 @@ func resourceUserRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 	user, resp, err = client.GetUserByID(id)
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			d.SetId("")
 			return nil
 		} else {
@@ -93,8 +93,8 @@ func resourceUserUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 
 	user, resp, err = client.GetUserByID(id)
 	if err != nil {
-		if resp.StatusCode == 404 {
-			resourceUserCreate(d, meta)
+		if resp != nil && resp.StatusCode == 404 {
+			return resourceUserCreate(d, meta)
 		} else {
 			return err
 		}
@@ -166,6 +166,9 @@ func resourceUserUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 
 	user, _, err = client.GetUserByID(id)
+	if err != nil {
+		return err
+	}
 
 	err = setUserResourceData(user, d)
 
@@ -179,7 +182,7 @@ func resourceUserDelete(d *schema.ResourceData, meta interface{}) (err error) {
 
 	resp, err = client.AdminDeleteUser(d.Get(userName).(string))
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			return
 		} else {
 			return err
@@ -199,19 +202,19 @@ func setUserResourceData(user *gitea.User, d *schema.ResourceData) (err error) {
 	d.Set("avatar_url", user.AvatarURL)
 	d.Set("last_login", user.LastLogin)
 	d.Set("language", user.Language)
-	d.Set(userLoginName, d.Get(userLoginName).(string))
+	d.Set(userLoginName, user.LoginName)
+	d.Set(userVisibility, string(user.Visibility))
+	d.Set(userDescription, user.Description)
+	d.Set(userLocation, user.Location)
+	d.Set(userActive, user.IsActive)
+	d.Set(userPhorbitLogin, user.ProhibitLogin)
+	d.Set(userRestricted, user.Restricted)
 	d.Set(userMustChangePassword, d.Get(userMustChangePassword).(bool))
 	d.Set(userSendNotification, d.Get(userSendNotification).(bool))
-	d.Set(userVisibility, d.Get(userVisibility).(string))
-	d.Set(userDescription, d.Get(userDescription).(string))
-	d.Set(userLocation, d.Get(userLocation).(string))
-	d.Set(userActive, d.Get(userActive).(bool))
 	d.Set(userAllowGitHook, d.Get(userAllowGitHook).(bool))
 	d.Set(userAllowLocalImport, d.Get(userAllowLocalImport).(bool))
 	d.Set(userMaxRepoCreation, d.Get(userMaxRepoCreation).(int))
-	d.Set(userPhorbitLogin, d.Get(userPhorbitLogin).(bool))
 	d.Set(userAllowCreateOrgs, d.Get(userAllowCreateOrgs).(bool))
-	d.Set(userRestricted, d.Get(userRestricted).(bool))
 	d.Set(userForcePasswordChange, d.Get(userForcePasswordChange).(bool))
 
 	return
@@ -354,6 +357,7 @@ func resourceGiteaUser() *schema.Resource {
 		},
 		Description: "`gitea_user` manages a native gitea user.\n\n" +
 			"If you are using OIDC or other kinds of authentication mechanisms you can still try to manage" +
-			"ssh keys or other ressources this way",
+			"ssh keys or other ressources this way.\n\n" +
+			"Import requires `password` to remain configured because Gitea does not return passwords.",
 	}
 }

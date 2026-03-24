@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"sync"
@@ -32,20 +33,55 @@ func getRepoMutex(owner, repo, branch string) *sync.Mutex {
 	return m.(*sync.Mutex)
 }
 
+func buildRepositoryFileID(owner, repo, branch, filePath string) string {
+	return fmt.Sprintf("%s/%s/%s/%s", owner, repo, url.QueryEscape(branch), url.QueryEscape(filePath))
+}
+
+func parseRepositoryFileID(id string) (owner, repo, branch, filePath string, err error) {
+	parts := strings.SplitN(id, "/", 4)
+	if len(parts) != 4 {
+		return "", "", "", "", fmt.Errorf("unexpected ID format (%q), expected <username>/<repo>/<branch>/<file_path>", id)
+	}
+
+	owner = parts[0]
+	repo = parts[1]
+	branch, err = url.QueryUnescape(parts[2])
+	if err != nil {
+		return "", "", "", "", fmt.Errorf("invalid branch in ID %q: %w", id, err)
+	}
+	filePath, err = url.QueryUnescape(parts[3])
+	if err != nil {
+		return "", "", "", "", fmt.Errorf("invalid file path in ID %q: %w", id, err)
+	}
+
+	return owner, repo, branch, filePath, nil
+}
+
 func resourceRepositoryFileRead(d *schema.ResourceData, meta interface{}) (err error) {
 	client := meta.(*gitea.Client)
 
-	idString := d.Id()
-	parts := strings.SplitN(idString, "/", 4)
-	username := parts[0]
-	name := parts[1]
-	branch := parts[2]
-	filePath := parts[3]
+	username, name, branch, filePath, err := parseRepositoryFileID(d.Id())
+	if err != nil {
+		return err
+	}
+
+	if err := d.Set("username", username); err != nil {
+		return err
+	}
+	if err := d.Set("name", name); err != nil {
+		return err
+	}
+	if err := d.Set("branch", branch); err != nil {
+		return err
+	}
+	if err := d.Set("file_path", filePath); err != nil {
+		return err
+	}
 
 	// Get current file metadata and contents
 	content, resp, err := client.GetContents(username, name, branch, filePath)
 	if err != nil {
-		if resp.StatusCode == http.StatusNotFound {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			d.SetId("")
 			return nil
 		} else {
@@ -57,7 +93,7 @@ func resourceRepositoryFileRead(d *schema.ResourceData, meta interface{}) (err e
 	if err != nil {
 		return err
 	}
-	if resp.StatusCode != 200 {
+	if resp != nil && resp.StatusCode != 200 {
 		return fmt.Errorf("error getting commit from repository: %s", resp.Status)
 	}
 
@@ -322,10 +358,13 @@ func resourceRepositoryFileDelete(d *schema.ResourceData, meta interface{}) (err
 
 func setRepositoryFileResourceData(response *gitea.FileResponse, d *schema.ResourceData) (err error) {
 	// Make a unique ID for the resource from the repo and file path
-	d.SetId(fmt.Sprintf("%s/%s/%s/%s", d.Get("username").(string),
+	d.Set("file_path", response.Content.Path)
+	d.SetId(buildRepositoryFileID(
+		d.Get("username").(string),
 		d.Get("name").(string),
 		d.Get("branch").(string),
-		response.Content.Path))
+		response.Content.Path,
+	))
 	d.Set("file_sha", response.Content.SHA)
 	d.Set("last_commit_sha", response.Commit.SHA)
 	d.Set("size", response.Content.Size)

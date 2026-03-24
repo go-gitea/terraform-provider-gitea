@@ -1,16 +1,26 @@
 package gitea
 
 import (
+	"context"
 	"fmt"
+	"strconv"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 const (
-	membersTeamID 	   string = "team_id"
+	membersTeamID      string = "team_id"
 	membersTeamMembers string = "members"
 )
+
+func parseTeamMembersID(id string) (int, error) {
+	teamID, err := strconv.Atoi(id)
+	if err != nil {
+		return 0, fmt.Errorf("unexpected ID format (%q), expected <team_id>", id)
+	}
+	return teamID, nil
+}
 
 func getTeamMembers(team_id int, meta interface{}) (membersNames []string, err error) {
 	client := meta.(*gitea.Client)
@@ -49,24 +59,65 @@ func getTeamMembers(team_id int, meta interface{}) (membersNames []string, err e
 	return memberNames, nil
 }
 
+func teamMembersDiff(current, desired []string) (toAdd, toRemove []string) {
+	currentSet := make(map[string]struct{}, len(current))
+	desiredSet := make(map[string]struct{}, len(desired))
+
+	for _, name := range current {
+		currentSet[name] = struct{}{}
+	}
+	for _, name := range desired {
+		desiredSet[name] = struct{}{}
+	}
+
+	for _, name := range desired {
+		if _, exists := currentSet[name]; !exists {
+			toAdd = append(toAdd, name)
+		}
+	}
+
+	for _, name := range current {
+		if _, exists := desiredSet[name]; !exists {
+			toRemove = append(toRemove, name)
+		}
+	}
+
+	return toAdd, toRemove
+}
+
 func resourceTeamMembersCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	client := meta.(*gitea.Client)
 	team_id := d.Get(membersTeamID).(int)
 
-	var memberNames []string 
-
-	// What if team already has member?
-	// What if user is already in the team?
-	// What if user does not exist?
-	
-	// Add members to the team
+	desiredMembers := make([]string, 0)
 	for _, name := range d.Get(membersTeamMembers).(*schema.Set).List() {
-		_ , err = client.AddTeamMember(int64(team_id), name.(string))
+		desiredMembers = append(desiredMembers, name.(string))
+	}
+
+	currentMembers, err := getTeamMembers(team_id, meta)
+	if err != nil {
+		return err
+	}
+
+	toAdd, toRemove := teamMembersDiff(currentMembers, desiredMembers)
+
+	for _, username := range toRemove {
+		_, err = client.RemoveTeamMember(int64(team_id), username)
 		if err != nil {
 			return err
 		}
-		// Update list of usernames of the team members
-		memberNames = append(memberNames, name.(string))
+	}
+
+	for _, username := range toAdd {
+		_, err = client.AddTeamMember(int64(team_id), username)
+		if err != nil {
+			return err
+		}
+	}
+
+	memberNames, err := getTeamMembers(team_id, meta)
+	if err != nil {
+		return err
 	}
 
 	err = setTeamMembersData(team_id, memberNames, d)
@@ -75,7 +126,10 @@ func resourceTeamMembersCreate(d *schema.ResourceData, meta interface{}) (err er
 }
 
 func resourceTeamMembersRead(d *schema.ResourceData, meta interface{}) (err error) {
-	team_id := d.Get(membersTeamID).(int)
+	team_id, err := parseTeamMembersID(d.Id())
+	if err != nil {
+		return err
+	}
 
 	memberNames, err := getTeamMembers(team_id, meta)
 	if err != nil {
@@ -89,11 +143,14 @@ func resourceTeamMembersRead(d *schema.ResourceData, meta interface{}) (err erro
 
 func resourceTeamMembersDelete(d *schema.ResourceData, meta interface{}) (err error) {
 	client := meta.(*gitea.Client)
-	team_id := d.Get(membersTeamID).(int)
+	team_id, err := parseTeamMembersID(d.Id())
+	if err != nil {
+		return err
+	}
 
 	var memberNames []string
 
-	memberNames , err = getTeamMembers(team_id, meta)
+	memberNames, err = getTeamMembers(team_id, meta)
 	if err != nil {
 		return err
 	}
@@ -123,7 +180,17 @@ func resourceGiteaTeamMembers() *schema.Resource {
 		Create: resourceTeamMembersCreate,
 		Delete: resourceTeamMembersDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: func(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+				teamID, err := parseTeamMembersID(d.Id())
+				if err != nil {
+					return nil, err
+				}
+				if err := d.Set(membersTeamID, teamID); err != nil {
+					return nil, err
+				}
+				d.SetId(fmt.Sprintf("%d", teamID))
+				return []*schema.ResourceData{d}, nil
+			},
 		},
 		Schema: map[string]*schema.Schema{
 			"team_id": {
@@ -135,15 +202,14 @@ func resourceGiteaTeamMembers() *schema.Resource {
 			"members": {
 				// TypeSet is better than TypeList because
 				// reordering the members will not trigger recreation
-				Type:        schema.TypeSet,
+				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 				Required:    true,
-				ForceNew:	 true,
+				ForceNew:    true,
 				Description: "The user names of the members of the team.",
 			},
-
 		},
 		Description: "`gitea_team_members` manages all members of a single team. This resource will be recreated on member changes.",
 	}

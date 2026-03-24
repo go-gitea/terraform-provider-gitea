@@ -98,7 +98,7 @@ func resourceRepoRead(d *schema.ResourceData, meta interface{}) (err error) {
 	repo, resp, err := client.GetRepoByID(id)
 
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			d.SetId("")
 			return nil
 		} else {
@@ -119,19 +119,22 @@ func resourceRepoCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	var orgRepo, hasAdmin bool
 
 	_, resp, err = client.GetOrg(d.Get(repoOwner).(string))
-
-	if resp.StatusCode == 404 {
-		_, err := searchUserByName(client, d.Get(repoOwner).(string))
-		if err != nil {
-			if strings.Contains(err.Error(), "could not be found") {
-				return errors.New(fmt.Sprintf("Creation of repository cound not proceed as owner %s is not present in gitea", d.Get(repoOwner).(string)))
+	if err != nil {
+		if resp != nil && resp.StatusCode == 404 {
+			_, err := searchUserByName(client, d.Get(repoOwner).(string))
+			if err != nil {
+				if strings.Contains(err.Error(), "could not be found") {
+					return fmt.Errorf("creation of repository cound not proceed as owner %s is not present in gitea", d.Get(repoOwner).(string))
+				}
+				tflog.Warn(context.Background(), "Error query for users. Assuming missing permissions and proceding with user permissions")
+				hasAdmin = false
+			} else {
+				hasAdmin = true
 			}
-			tflog.Warn(context.Background(), "Error query for users. Assuming missing permissions and proceding with user permissions")
-			hasAdmin = false
+			orgRepo = false
 		} else {
-			hasAdmin = true
+			return err
 		}
-		orgRepo = false
 	} else {
 		orgRepo = true
 	}
@@ -386,12 +389,15 @@ func deleteRepo(d *schema.ResourceData, client *gitea.Client) (err error) {
 
 func setRepoResourceData(repo *gitea.Repository, d *schema.ResourceData) (err error) {
 	d.SetId(fmt.Sprintf("%d", repo.ID))
-	d.Set("username", repo.Owner.UserName)
+	if repo.Owner != nil {
+		d.Set("username", repo.Owner.UserName)
+	}
 	d.Set("name", repo.Name)
 	d.Set("description", repo.Description)
 	d.Set("full_name", repo.FullName)
 	d.Set("private", repo.Private)
 	d.Set("fork", repo.Fork)
+	d.Set(repoTemplate, repo.Template)
 	d.Set("mirror", repo.Mirror)
 	d.Set("size", repo.Size)
 	d.Set("html_url", repo.HTMLURL)
@@ -405,9 +411,22 @@ func setRepoResourceData(repo *gitea.Repository, d *schema.ResourceData) (err er
 	d.Set("default_branch", repo.DefaultBranch)
 	d.Set("created", repo.Created.String())
 	d.Set("updated", repo.Updated.String())
-	d.Set("permission_admin", repo.Permissions.Admin)
-	d.Set("permission_push", repo.Permissions.Push)
-	d.Set("permission_pull", repo.Permissions.Pull)
+	d.Set(repoIssues, repo.HasIssues)
+	d.Set(repoWiki, repo.HasWiki)
+	d.Set(repoPrs, repo.HasPullRequests)
+	d.Set(repoProjects, repo.HasProjects)
+	d.Set(repoIgnoreWhitespace, repo.IgnoreWhitespaceConflicts)
+	d.Set(repoAllowMerge, repo.AllowMerge)
+	d.Set(repoAllowRebase, repo.AllowRebase)
+	d.Set(repoAllowRebaseMerge, repo.AllowRebaseMerge)
+	d.Set(repoAllowSquash, repo.AllowSquash)
+	d.Set(repoArchived, repo.Archived)
+	d.Set(migrationMirrorInterval, repo.MirrorInterval)
+	if repo.Permissions != nil {
+		d.Set("permission_admin", repo.Permissions.Admin)
+		d.Set("permission_push", repo.Permissions.Push)
+		d.Set("permission_pull", repo.Permissions.Pull)
+	}
 
 	return
 }

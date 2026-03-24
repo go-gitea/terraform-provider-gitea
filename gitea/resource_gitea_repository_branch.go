@@ -43,7 +43,7 @@ func resourceRepoBranchRead(d *schema.ResourceData, meta interface{}) (err error
 
 	repo, resp, err := client.GetRepoByID(repoId)
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			d.SetId("")
 			return nil
 		} else {
@@ -53,7 +53,7 @@ func resourceRepoBranchRead(d *schema.ResourceData, meta interface{}) (err error
 
 	branch, resp, err := client.GetRepoBranch(repo.Owner.UserName, repo.Name, branchId)
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			d.SetId("")
 			return nil
 		} else {
@@ -102,14 +102,24 @@ func resourceRepoBranchDelete(d *schema.ResourceData, meta interface{}) (err err
 
 	repo, resp, err := client.GetRepoByID(repoId)
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			d.SetId("")
 			return nil
 		}
 		return err
 	}
 
-	client.DeleteRepoBranch(repo.Owner.UserName, repo.Name, branchId)
+	deleted, resp, err := client.DeleteRepoBranch(repo.Owner.UserName, repo.Name, branchId)
+	if err != nil {
+		if resp != nil && resp.StatusCode == 404 {
+			d.SetId("")
+			return nil
+		}
+		return err
+	}
+	if !deleted {
+		return fmt.Errorf("branch %q was not deleted", branchId)
+	}
 	return nil
 }
 

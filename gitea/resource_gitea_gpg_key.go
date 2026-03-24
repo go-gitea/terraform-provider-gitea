@@ -27,7 +27,7 @@ func resourceGPGKeyRead(ctx context.Context, d *schema.ResourceData, meta interf
 	pubKey, resp, err = client.GetGPGKey(id)
 
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			d.SetId("")
 			return nil
 		} else {
@@ -73,7 +73,7 @@ func resourceGPGKeyDelete(ctx context.Context, d *schema.ResourceData, meta inte
 	resp, err = client.DeleteGPGKey(id)
 
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			return nil
 		} else {
 			return diag.FromErr(fmt.Errorf("error deleting gpg key: %w", err))
@@ -85,6 +85,7 @@ func resourceGPGKeyDelete(ctx context.Context, d *schema.ResourceData, meta inte
 
 func setGPGKeyResourceData(pubKey *gitea.GPGKey, d *schema.ResourceData) error {
 	d.SetId(fmt.Sprintf("%d", pubKey.ID))
+	d.Set(GPGKeyArmored, pubKey.PublicKey)
 	d.Set(GPGKeyGPGId, pubKey.KeyID)
 
 	return nil

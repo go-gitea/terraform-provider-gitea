@@ -49,6 +49,9 @@ func resourceGiteaRepositoryActionsSecret() *schema.Resource {
 				Description: "Date of 'actions_secret' creation.",
 			},
 		},
+		Description: "`gitea_repository_actions_secret` manages a repository actions secret.\n\n" +
+			"Import expects the resource ID in the form `owner:repository:secret_name`.\n" +
+			"Because Gitea does not return secret values, `secret_value` must still be configured when importing.",
 	}
 }
 
@@ -133,7 +136,10 @@ func resourceGiteaRepositoryActionsSecretUpdate(d *schema.ResourceData, meta int
 func resourceGiteaRepositoryActionsSecretRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*gitea.Client)
 
-	repoOwner, repository, secretName, _ := parseThreePartID(d.Id(), "repository_owner", "repository", "secret_name")
+	repoOwner, repository, secretName, err := parseThreePartID(d.Id(), "repository_owner", "repository", "secret_name")
+	if err != nil {
+		return err
+	}
 
 	var requestedSecret *gitea.Secret
 
@@ -141,12 +147,19 @@ func resourceGiteaRepositoryActionsSecretRead(d *schema.ResourceData, meta inter
 	for requestedSecret == nil {
 		page = page + 1
 
-		secrets, _, _ := client.ListRepoActionSecret(repoOwner, repository, gitea.ListRepoActionSecretOption{
+		secrets, resp, err := client.ListRepoActionSecret(repoOwner, repository, gitea.ListRepoActionSecretOption{
 			ListOptions: gitea.ListOptions{
 				Page:     page,
 				PageSize: 100,
 			},
 		})
+		if err != nil {
+			if resp != nil && resp.StatusCode == 404 {
+				d.SetId("")
+				return nil
+			}
+			return err
+		}
 
 		if len(secrets) == 0 {
 			d.SetId("")

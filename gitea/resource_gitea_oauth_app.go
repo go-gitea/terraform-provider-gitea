@@ -1,6 +1,7 @@
 package gitea
 
 import (
+	"errors"
 	"fmt"
 
 	"code.gitea.io/sdk/gitea"
@@ -14,6 +15,8 @@ const (
 	oauth2KeyClientId           string = "client_id"
 	oauth2KeyClientSecret       string = "client_secret"
 )
+
+var errOauth2AppNotFound = errors.New("oauth app not found")
 
 func resourceGiteaOauthApp() *schema.Resource {
 	return &schema.Resource{
@@ -145,7 +148,7 @@ func searchOauth2AppByClientId(c *gitea.Client, id string) (res *gitea.Oauth2, e
 			return nil, err
 		}
 		if len(apps) == 0 {
-			return nil, fmt.Errorf("no oauth client can be found by id '%s'", id)
+			return nil, errOauth2AppNotFound
 		}
 
 		for _, app := range apps {
@@ -164,6 +167,10 @@ func resourceOauth2AppRead(d *schema.ResourceData, meta interface{}) (err error)
 	app, err := searchOauth2AppByClientId(client, d.Id())
 
 	if err != nil {
+		if errors.Is(err, errOauth2AppNotFound) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 
@@ -178,6 +185,10 @@ func resourceOauth2AppDelete(d *schema.ResourceData, meta interface{}) (err erro
 	app, err := searchOauth2AppByClientId(client, d.Id())
 
 	if err != nil {
+		if errors.Is(err, errOauth2AppNotFound) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 

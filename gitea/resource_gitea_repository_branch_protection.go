@@ -58,7 +58,7 @@ func resourceRepositoryBranchProtectionRead(d *schema.ResourceData, meta interfa
 
 	bp, resp, err := client.GetBranchProtection(user, repo, rule_name)
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			d.SetId("")
 			return
 		} else {
@@ -272,6 +272,24 @@ func setRepositoryBranchProtectionData(bp *gitea.BranchProtection, user string, 
 	return err
 }
 
+func resourceRepositoryBranchProtectionImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	parts := strings.SplitN(d.Id(), "/", 3)
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("unexpected ID format (%q), expected <username>/<repo>/<rule_name>", d.Id())
+	}
+	if err := d.Set("username", parts[0]); err != nil {
+		return nil, err
+	}
+	if err := d.Set("name", parts[1]); err != nil {
+		return nil, err
+	}
+	if err := d.Set("rule_name", parts[2]); err != nil {
+		return nil, err
+	}
+	d.SetId(parts[2])
+	return []*schema.ResourceData{d}, nil
+}
+
 func resourceGiteaRepositoryBranchProtection() *schema.Resource {
 	return &schema.Resource{
 		Read:   resourceRepositoryBranchProtectionRead,
@@ -279,16 +297,7 @@ func resourceGiteaRepositoryBranchProtection() *schema.Resource {
 		Update: resourceRepositoryBranchProtectionUpdate,
 		Delete: resourceRepositoryBranchProtectionDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: func(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
-				parts := strings.Split(d.Id(), "/")
-				if len(parts) != 3 {
-					return nil, fmt.Errorf("unexpected ID format (%q), expected <username>/<repo>/<rule_name>", d.Id())
-				}
-				d.Set("username", parts[0])
-				d.Set("name", parts[1])
-				d.Set("rule_name", parts[2])
-				return []*schema.ResourceData{d}, nil
-			},
+			StateContext: resourceRepositoryBranchProtectionImport,
 		},
 		Schema: map[string]*schema.Schema{
 			"username": {

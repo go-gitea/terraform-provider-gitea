@@ -28,7 +28,7 @@ func resourceForkCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		d.Get(forkRepo).(string),
 		opts)
 	if err == nil {
-		err = setForkResourceData(repo, d)
+		err = setForkResourceData(repo, client, d)
 	}
 	return err
 }
@@ -46,7 +46,7 @@ func resourceForkRead(d *schema.ResourceData, meta interface{}) (err error) {
 	repo, resp, err := client.GetRepoByID(id)
 
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			d.SetId("")
 			return nil
 		} else {
@@ -54,7 +54,7 @@ func resourceForkRead(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	}
 
-	err = setForkResourceData(repo, d)
+	err = setForkResourceData(repo, client, d)
 
 	return
 }
@@ -68,13 +68,19 @@ func resourceForkDelete(d *schema.ResourceData, meta interface{}) (err error) {
 		return err
 	}
 
-	repo, _, err := client.GetRepoByID(id)
-	var resp *gitea.Response
+	repo, resp, err := client.GetRepoByID(id)
+	if err != nil {
+		if resp != nil && resp.StatusCode == 404 {
+			d.SetId("")
+			return nil
+		}
+		return err
+	}
 
 	resp, err = client.DeleteRepo(repo.Owner.UserName, repo.Name)
 
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp != nil && resp.StatusCode == 404 {
 			return
 		} else {
 			return err
@@ -84,9 +90,32 @@ func resourceForkDelete(d *schema.ResourceData, meta interface{}) (err error) {
 	return
 }
 
-func setForkResourceData(repo *gitea.Repository, d *schema.ResourceData) (err error) {
-
+func setForkResourceData(repo *gitea.Repository, client *gitea.Client, d *schema.ResourceData) (err error) {
 	d.SetId(fmt.Sprintf("%d", repo.ID))
+
+	owner := d.Get(forkOwner).(string)
+	name := d.Get(forkRepo).(string)
+	if repo.Parent != nil {
+		if repo.Parent.Owner != nil {
+			owner = repo.Parent.Owner.UserName
+		}
+		name = repo.Parent.Name
+	}
+	d.Set(forkOwner, owner)
+	d.Set(forkRepo, name)
+
+	organization := ""
+	if repo.Owner != nil {
+		_, resp, orgErr := client.GetOrg(repo.Owner.UserName)
+		if orgErr != nil {
+			if resp != nil && resp.StatusCode != 404 {
+				return orgErr
+			}
+		} else {
+			organization = repo.Owner.UserName
+		}
+	}
+	d.Set(forkOrganization, organization)
 
 	return
 }

@@ -113,7 +113,7 @@ func dataSourceGiteaRepositoryFileRead(d *schema.ResourceData, meta interface{})
 	}
 
 	// Set a stable ID
-	d.SetId(fmt.Sprintf("%s/%s/%s/%s", owner, repo, branch, content.Path))
+	d.SetId(buildRepositoryFileID(owner, repo, branch, content.Path))
 
 	// Reuse resource setter for common fields
 	if err := setRepositoryFileResourceData(result, d); err != nil {
