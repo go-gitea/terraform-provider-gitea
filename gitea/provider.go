@@ -67,7 +67,8 @@ func Provider() *schema.Provider {
 			// "gitea_team":   dataSourceGiteaTeam(),
 			// "gitea_teams":  dataSourceGiteaTeams(),
 			// "gitea_team_members":  dataSourceGiteaTeamMembers(),
-			"gitea_repo": dataSourceGiteaRepo(),
+			"gitea_repo":            dataSourceGiteaRepo(),
+			"gitea_repository_file": dataSourceGiteaRepositoryFile(),
 			// "gitea_repos":  dataSourceGiteaRepos(),
 		},
 
@@ -91,6 +92,7 @@ func Provider() *schema.Provider {
 			"gitea_repository_branch_protection": resourceGiteaRepositoryBranchProtection(),
 			"gitea_repository_actions_variable":  resourceGiteaRepositoryActionsVariable(),
 			"gitea_repository_actions_secret":    resourceGiteaRepositoryActionsSecret(),
+			"gitea_repository_file":              resourceGiteaRepositoryFile(),
 			"gitea_repository_collaborator":      resourceGiteaRepositoryCollaborator(),
 		},
 
