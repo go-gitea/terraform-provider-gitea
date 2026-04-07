@@ -5,7 +5,7 @@ go 1.26
 toolchain go1.26.1
 
 require (
-	code.gitea.io/sdk/gitea v0.24.0
+	code.gitea.io/sdk/gitea v0.24.1
 	github.com/hashicorp/terraform-plugin-docs v0.24.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.40.0
