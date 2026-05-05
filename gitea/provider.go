@@ -67,8 +67,8 @@ func Provider() *schema.Provider {
 			// "gitea_team":   dataSourceGiteaTeam(),
 			// "gitea_teams":  dataSourceGiteaTeams(),
 			// "gitea_team_members":  dataSourceGiteaTeamMembers(),
-			"gitea_repo": dataSourceGiteaRepo(),
-			// "gitea_repos":  dataSourceGiteaRepos(),
+			"gitea_repo":  dataSourceGiteaRepo(),
+			"gitea_repos": dataSourceGiteaRepos(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
