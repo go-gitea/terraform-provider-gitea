@@ -1,7 +1,7 @@
-package main // import "code.gitea.ioterraform-provider-gitea"
+package main // import "gitea.dev/terraform-provider-gitea"
 
 import (
-	"code.gitea.io/terraform-provider-gitea/gitea"
+	"gitea.dev/terraform-provider-gitea/gitea"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
 )
 

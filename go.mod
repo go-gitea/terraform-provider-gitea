@@ -1,4 +1,4 @@
-module code.gitea.io/terraform-provider-gitea
+module gitea.dev/terraform-provider-gitea
 
 go 1.26
 
