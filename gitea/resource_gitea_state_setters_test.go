@@ -200,6 +200,7 @@ func TestSetTeamResourceDataUsesTeamFields(t *testing.T) {
 		"can_create_repos":         true,
 		"include_all_repositories": false,
 		"units":                    "stale-units",
+		"units_map":                map[string]interface{}{"repo.code": "read"},
 		"repositories":             []interface{}{"stale"},
 	})
 
@@ -214,6 +215,9 @@ func TestSetTeamResourceDataUsesTeamFields(t *testing.T) {
 		Units: []gitea.RepoUnitType{
 			gitea.RepoUnitCode,
 			gitea.RepoUnitProjects,
+		},
+		UnitsMap: map[string]string{
+			"repo.code": "write",
 		},
 	}
 
@@ -241,6 +245,10 @@ func TestSetTeamResourceDataUsesTeamFields(t *testing.T) {
 	}
 	if got := d.Get(TeamUnits).(string); got != "[repo.code repo.projects]" {
 		t.Fatalf("expected units from team, got %q", got)
+	}
+	gotUnitsMap := d.Get("units_map").(map[string]interface{})
+	if got := gotUnitsMap["repo.code"].(string); got != "write" {
+		t.Fatalf("expected units_map['repo.code'] to be 'write', got %q", got)
 	}
 	if got := resourceDataStringList(d, TeamRepositories); !reflect.DeepEqual(got, []string{"alpha", "zeta"}) {
 		t.Fatalf("expected repositories from API and sorted, got %#v", got)

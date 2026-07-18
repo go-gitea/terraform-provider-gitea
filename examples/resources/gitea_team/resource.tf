@@ -26,3 +26,14 @@ resource "gitea_team" "test_team_restricted" {
   include_all_repositories = false
   repositories             = [gitea_repository.test.name]
 }
+
+resource "gitea_team" "test_team_units" {
+  name         = "Devs-Granular-Permissions"
+  organisation = gitea_org.test_org.name
+  description  = "Devs with granular unit permissions"
+  units_map = {
+    "repo.code"   = "write"
+    "repo.issues" = "read"
+    "repo.wiki"   = "none"
+  }
+}

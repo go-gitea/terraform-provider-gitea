@@ -14,3 +14,4 @@ resource "gitea_repository_branch" "test-branch" {
   name       = "feat/testing-branch"
   repository = gitea_repository.test-repo.id
 }
+

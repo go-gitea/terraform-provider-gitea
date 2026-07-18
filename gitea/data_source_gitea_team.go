@@ -45,6 +45,14 @@ func dataSourceGiteaTeam() *schema.Resource {
 				Computed: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
+			"units_map": {
+				Type:        schema.TypeMap,
+				Computed:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "Map of repository units to their permissions",
+			},
 		},
 	}
 }
@@ -76,6 +84,10 @@ func dataSourceGiteaTeamRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	if err := d.Set("units", units); err != nil {
 		return fmt.Errorf("failed to set units: %w", err)
+	}
+
+	if err := d.Set("units_map", team.UnitsMap); err != nil {
+		return fmt.Errorf("failed to set units_map: %w", err)
 	}
 
 	return nil

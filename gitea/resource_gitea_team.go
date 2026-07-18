@@ -56,36 +56,48 @@ func resourceTeamCreate(d *schema.ResourceData, meta interface{}) (err error) {
 
 	var team *gitea.Team
 	var units []gitea.RepoUnitType
+	var unitsMap map[string]string
 
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.code") {
-		units = append(units, gitea.RepoUnitCode)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.issues") {
-		units = append(units, gitea.RepoUnitIssues)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.ext_issues") {
-		units = append(units, gitea.RepoUnitExtIssues)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.wiki") {
-		units = append(units, gitea.RepoUnitWiki)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.pulls") {
-		units = append(units, gitea.RepoUnitPulls)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.releases") {
-		units = append(units, gitea.RepoUnitReleases)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.ext_wiki") {
-		units = append(units, gitea.RepoUnitExtWiki)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.projects") {
-		units = append(units, gitea.RepoUnitProjects)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.actions") {
-		units = append(units, gitea.RepoUnitActions)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.packages") {
-		units = append(units, gitea.RepoUnitPackages)
+	if v, ok := d.GetOk("units_map"); ok {
+		unitsMap = make(map[string]string)
+		for k, val := range v.(map[string]interface{}) {
+			permission := val.(string)
+			unitsMap[k] = permission
+			if permission != "none" {
+				units = append(units, gitea.RepoUnitType(k))
+			}
+		}
+	} else {
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.code") {
+			units = append(units, gitea.RepoUnitCode)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.issues") {
+			units = append(units, gitea.RepoUnitIssues)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.ext_issues") {
+			units = append(units, gitea.RepoUnitExtIssues)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.wiki") {
+			units = append(units, gitea.RepoUnitWiki)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.pulls") {
+			units = append(units, gitea.RepoUnitPulls)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.releases") {
+			units = append(units, gitea.RepoUnitReleases)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.ext_wiki") {
+			units = append(units, gitea.RepoUnitExtWiki)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.projects") {
+			units = append(units, gitea.RepoUnitProjects)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.actions") {
+			units = append(units, gitea.RepoUnitActions)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.packages") {
+			units = append(units, gitea.RepoUnitPackages)
+		}
 	}
 
 	includeAllRepos := d.Get(TeamIncludeAllReposFlag).(bool)
@@ -97,6 +109,7 @@ func resourceTeamCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		CanCreateOrgRepo:        d.Get(TeamCreateRepoFlag).(bool),
 		IncludesAllRepositories: includeAllRepos,
 		Units:                   units,
+		UnitsMap:                unitsMap,
 	}
 
 	team, _, err = client.CreateTeam(d.Get(TeamOrg).(string), opts)
@@ -145,36 +158,48 @@ func resourceTeamUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	includeAllRepos := d.Get(TeamIncludeAllReposFlag).(bool)
 
 	var units []gitea.RepoUnitType
+	var unitsMap map[string]string
 
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.code") {
-		units = append(units, gitea.RepoUnitCode)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.issues") {
-		units = append(units, gitea.RepoUnitIssues)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.ext_issues") {
-		units = append(units, gitea.RepoUnitExtIssues)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.wiki") {
-		units = append(units, gitea.RepoUnitWiki)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.pulls") {
-		units = append(units, gitea.RepoUnitPulls)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.releases") {
-		units = append(units, gitea.RepoUnitReleases)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.ext_wiki") {
-		units = append(units, gitea.RepoUnitExtWiki)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.projects") {
-		units = append(units, gitea.RepoUnitProjects)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.actions") {
-		units = append(units, gitea.RepoUnitActions)
-	}
-	if strings.Contains(d.Get(TeamUnits).(string), "repo.packages") {
-		units = append(units, gitea.RepoUnitPackages)
+	if v, ok := d.GetOk("units_map"); ok {
+		unitsMap = make(map[string]string)
+		for k, val := range v.(map[string]interface{}) {
+			permission := val.(string)
+			unitsMap[k] = permission
+			if permission != "none" {
+				units = append(units, gitea.RepoUnitType(k))
+			}
+		}
+	} else {
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.code") {
+			units = append(units, gitea.RepoUnitCode)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.issues") {
+			units = append(units, gitea.RepoUnitIssues)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.ext_issues") {
+			units = append(units, gitea.RepoUnitExtIssues)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.wiki") {
+			units = append(units, gitea.RepoUnitWiki)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.pulls") {
+			units = append(units, gitea.RepoUnitPulls)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.releases") {
+			units = append(units, gitea.RepoUnitReleases)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.ext_wiki") {
+			units = append(units, gitea.RepoUnitExtWiki)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.projects") {
+			units = append(units, gitea.RepoUnitProjects)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.actions") {
+			units = append(units, gitea.RepoUnitActions)
+		}
+		if strings.Contains(d.Get(TeamUnits).(string), "repo.packages") {
+			units = append(units, gitea.RepoUnitPackages)
+		}
 	}
 
 	opts := gitea.EditTeamOption{
@@ -184,6 +209,7 @@ func resourceTeamUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		CanCreateOrgRepo:        &canCreateRepo,
 		IncludesAllRepositories: &includeAllRepos,
 		Units:                   units,
+		UnitsMap:                unitsMap,
 	}
 
 	resp, err = client.EditTeam(id, opts)
@@ -247,6 +273,22 @@ func setTeamResourceData(team *gitea.Team, repositories []string, d *schema.Reso
 	d.Set(TeamPermissions, string(team.Permission))
 	d.Set(TeamIncludeAllReposFlag, team.IncludesAllRepositories)
 	d.Set(TeamUnits, fmt.Sprintf("%v", team.Units))
+	if v, ok := d.GetOk("units_map"); ok {
+		configMap := v.(map[string]interface{})
+		stateMap := make(map[string]string)
+		for k := range configMap {
+			if team.UnitsMap != nil {
+				if apiVal, exists := team.UnitsMap[k]; exists {
+					stateMap[k] = apiVal
+					continue
+				}
+			}
+			stateMap[k] = "none"
+		}
+		d.Set("units_map", stateMap)
+	} else {
+		d.Set("units_map", nil)
+	}
 	repositories = append([]string(nil), repositories...)
 	sort.Strings(repositories)
 	d.Set(TeamRepositories, stringSliceToInterfaceSlice(repositories))
@@ -340,6 +382,15 @@ func resourceGiteaTeam() *schema.Resource {
 				Default:  "[repo.code, repo.issues, repo.ext_issues, repo.wiki, repo.pulls, repo.releases, repo.projects, repo.ext_wiki, repo.actions, repo.packages]",
 				Description: "List of types of Repositories that should be allowed to be created from Team members.\n" +
 					"Can be `repo.code`, `repo.issues`, `repo.ext_issues`, `repo.wiki`, `repo.pulls`, `repo.releases`, `repo.projects`, `repo.ext_wiki`, `repo.actions` and/or `repo.packages`",
+			},
+			"units_map": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Computed:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "Map of repository units to their permissions",
 			},
 			"repositories": {
 				Type: schema.TypeList,
