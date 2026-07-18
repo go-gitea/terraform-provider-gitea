@@ -44,6 +44,7 @@ const (
 	repoBPBlockMergeOnRejectedReviews        string = "block_merge_on_rejected_reviews"
 	repoBPBlockMergeOnOfficialReviewRequests string = "block_merge_on_official_review_requests"
 	repoBPBlockMergeOnOutdatedBranch         string = "block_merge_on_outdated_branch"
+	repoBPBlockAdminMergeOverride            string = "block_admin_merge_override"
 
 	repoBPUpdatedAt string = "updated_at"
 	repoBPCreatedAt string = "created_at"
@@ -143,9 +144,10 @@ func resourceRepositoryBranchProtectionCreate(d *schema.ResourceData, meta inter
 		BlockOnOutdatedBranch:         d.Get(repoBPBlockMergeOnOutdatedBranch).(bool),
 		DismissStaleApprovals:         d.Get(repoBPDismissStaleApprovals).(bool),
 		// IgnoreStaleApprovals:          d.Get(repoBPIgnoreStaleApprovals).(bool),
-		RequireSignedCommits:    d.Get(repoBPRequireSignedCommits).(bool),
-		ProtectedFilePatterns:   d.Get(repoBPProtectedFilePatterns).(string),
-		UnprotectedFilePatterns: d.Get(repoBPUnprotectedFilePatterns).(string),
+		RequireSignedCommits:      d.Get(repoBPRequireSignedCommits).(bool),
+		ProtectedFilePatterns:     d.Get(repoBPProtectedFilePatterns).(string),
+		UnprotectedFilePatterns:   d.Get(repoBPUnprotectedFilePatterns).(string),
+		BlockAdminMergeOverride:   d.Get(repoBPBlockAdminMergeOverride).(bool),
 	}
 
 	bp, _, err := client.CreateBranchProtection(user, repo, bpOption)
@@ -191,6 +193,7 @@ func resourceRepositoryBranchProtectionUpdate(d *schema.ResourceData, meta inter
 	requireSignedCommits := d.Get(repoBPRequireSignedCommits).(bool)
 	protectedFilePatterns := d.Get(repoBPProtectedFilePatterns).(string)
 	unprotectedFilePatterns := d.Get(repoBPUnprotectedFilePatterns).(string)
+	blockAdminMergeOverride := d.Get(repoBPBlockAdminMergeOverride).(bool)
 
 	bpOption := gitea.EditBranchProtectionOption{
 		EnablePush:                    &enablePush,
@@ -212,9 +215,10 @@ func resourceRepositoryBranchProtectionUpdate(d *schema.ResourceData, meta inter
 		BlockOnOutdatedBranch:         &blockOnOutdatedBranch,
 		DismissStaleApprovals:         &dismissStaleApprovals,
 		// IgnoreStaleApprovals:          &ignoreStaleApprovals,
-		RequireSignedCommits:    &requireSignedCommits,
-		ProtectedFilePatterns:   &protectedFilePatterns,
-		UnprotectedFilePatterns: &unprotectedFilePatterns,
+		RequireSignedCommits:      &requireSignedCommits,
+		ProtectedFilePatterns:     &protectedFilePatterns,
+		UnprotectedFilePatterns:   &unprotectedFilePatterns,
+		BlockAdminMergeOverride:   &blockAdminMergeOverride,
 	}
 
 	bp, _, err := client.EditBranchProtection(user, repo, rule_name, bpOption)
@@ -266,6 +270,7 @@ func setRepositoryBranchProtectionData(bp *gitea.BranchProtection, user string, 
 	d.Set(repoBPBlockMergeOnRejectedReviews, bp.BlockOnRejectedReviews)
 	d.Set(repoBPBlockMergeOnOfficialReviewRequests, bp.BlockOnOfficialReviewRequests)
 	d.Set(repoBPBlockMergeOnOutdatedBranch, bp.BlockOnOutdatedBranch)
+	d.Set(repoBPBlockAdminMergeOverride, bp.BlockAdminMergeOverride)
 	d.Set(repoBPUpdatedAt, bp.Updated)
 	d.Set(repoBPCreatedAt, bp.Created)
 
@@ -501,6 +506,13 @@ func resourceGiteaRepositoryBranchProtection() *schema.Resource {
 				ForceNew:    false,
 				Default:     false,
 				Description: "Merging will not be possible when head branch is behind base branch.",
+			},
+			"block_admin_merge_override": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				ForceNew:    false,
+				Default:     false,
+				Description: "Prevent admins from bypassing branch protection rules when merging.",
 			},
 			"updated_at": {
 				Type:        schema.TypeString,
