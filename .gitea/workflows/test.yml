@@ -14,6 +14,23 @@ jobs:
     - uses: actions/checkout@v7
     - uses: hashicorp/setup-terraform@v4
 
+    - name: Set up Go
+      uses: actions/setup-go@v7
+      with:
+        go-version-file: 'go.mod'
+
+    - name: Build Provider
+      run: |
+        go build -o terraform-provider-gitea
+        cat <<EOF > $HOME/.terraformrc
+        provider_installation {
+          dev_overrides {
+            "go-gitea/gitea" = "${{ github.workspace }}"
+          }
+          direct {}
+        }
+        EOF
+
     - name: Terraform fmt
       id: fmt
       run: terraform fmt -check -diff -recursive
