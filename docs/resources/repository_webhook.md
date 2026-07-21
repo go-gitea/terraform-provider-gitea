@@ -12,16 +12,31 @@ This resource allows you to create and manage webhooks for repositories.
 
 ## Example Usage
 
+### Standard Gitea Webhook
 ```terraform
-resource "gitea_repository_webhook" "example" {
-  username      = "my-org"
-  name          = "my-repo"
-  type          = "gitea"
-  url           = "https://example.com/webhook"
-  content_type  = "json"
-  active        = true
-  events        = ["push", "pull_request"]
-  branch_filter = "*"
+resource "gitea_repository_webhook" "gitea_hook" {
+  username     = "my-org"
+  name         = "my-repo"
+  type         = "gitea"
+  url          = "https://example.com/webhook"
+  content_type = "json"
+  events       = ["push", "pull_request"]
+  active       = true
+}
+```
+
+### Slack Webhook
+```terraform
+resource "gitea_repository_webhook" "slack_hook" {
+  username       = "my-org"
+  name           = "my-repo"
+  type           = "slack"
+  url            = "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+  channel        = "#general"
+  slack_username = "gitea-bot"
+  color          = "#00ff00"
+  events         = ["push", "issues"]
+  active         = true
 }
 ```
 
@@ -30,19 +45,25 @@ resource "gitea_repository_webhook" "example" {
 
 ### Required
 
-- `active` (Boolean) Set webhook to active, e.g. `true`
-- `branch_filter` (String) Set branch filter on the webhook, e.g. `"*"`
-- `content_type` (String) The content type of the payload. It can be `json`, or `form`
-- `events` (List of String) A list of events that will trigger the webhool, e.g. `["push"]`
+- `events` (List of String) A list of events that will trigger the webhook, e.g. `["push"]`
 - `name` (String) Repository name
-- `type` (String) Webhook type, e.g. `gitea`
-- `url` (String) Target URL of the webhook
+- `type` (String) Webhook type, e.g. `gitea`, `gogs`, `slack`, `discord`, `dingtalk`, `msteams`, `telegram`, `feishu`, `matrix`, `wechatwork`, `packagist`
 - `username` (String) User name or organization name
 
 ### Optional
 
-- `authorization_header` (String) Webhook authorization header
-- `secret` (String) Webhook secret
+- `active` (Boolean) Set webhook to active, e.g. `true` (defaults to `true`)
+- `authorization_header` (String, Sensitive) Webhook authorization header
+- `branch_filter` (String) Set branch filter on the webhook, e.g. `"*"` (defaults to `*`)
+- `channel` (String) Channel name for Slack webhooks (e.g. `#general` or `@username`)
+- `color` (String) Hex color code for Slack webhooks (e.g. `#ff0000`)
+- `config` (Map of String) Additional key-value configuration options for webhooks
+- `content_type` (String) The content type of the payload. It can be `json`, or `form`
+- `http_method` (String) HTTP method used for the webhook
+- `icon_url` (String) Icon URL for Slack or Discord webhooks
+- `secret` (String, Sensitive) Webhook secret
+- `slack_username` (String) Bot username for Slack webhooks
+- `url` (String) Target URL of the webhook
 
 ### Read-Only
 

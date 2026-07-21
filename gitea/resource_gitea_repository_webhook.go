@@ -22,6 +22,12 @@ const (
 	repoWebhookBranchFilter        string = "branch_filter"
 	repoWebhookActive              string = "active"
 	repoWebhookCreatedAt           string = "created_at"
+	repoWebhookChannel             string = "channel"
+	repoWebhookSlackUsername       string = "slack_username"
+	repoWebhookIconUrl             string = "icon_url"
+	repoWebhookColor               string = "color"
+	repoWebhookHttpMethod          string = "http_method"
+	repoWebhookConfig              string = "config"
 )
 
 func resourceRepositoryWebhookRead(d *schema.ResourceData, meta interface{}) (err error) {
@@ -50,21 +56,57 @@ func resourceRepositoryWebhookRead(d *schema.ResourceData, meta interface{}) (er
 	return
 }
 
+func buildWebhookConfigMap(d *schema.ResourceData) map[string]string {
+	config := make(map[string]string)
+
+	if rawConfig, ok := d.GetOk(repoWebhookConfig); ok {
+		for k, v := range rawConfig.(map[string]interface{}) {
+			if strVal, ok := v.(string); ok {
+				config[k] = strVal
+			}
+		}
+	}
+
+	if v, ok := d.GetOk(repoWebhookUrl); ok && v.(string) != "" {
+		config["url"] = v.(string)
+	}
+	if v, ok := d.GetOk(repoWebhookContentType); ok && v.(string) != "" {
+		config["content_type"] = v.(string)
+	} else if wType, ok := d.GetOk(repoWebhookType); ok {
+		t := strings.ToLower(wType.(string))
+		if (t == "gitea" || t == "gogs") && config["content_type"] == "" {
+			config["content_type"] = "json"
+		}
+	}
+	if v, ok := d.GetOk(repoWebhookSecret); ok && v.(string) != "" {
+		config["secret"] = v.(string)
+	}
+	if v, ok := d.GetOk(repoWebhookHttpMethod); ok && v.(string) != "" {
+		config["http_method"] = v.(string)
+	}
+	if v, ok := d.GetOk(repoWebhookChannel); ok && v.(string) != "" {
+		config["channel"] = v.(string)
+	}
+	if v, ok := d.GetOk(repoWebhookSlackUsername); ok && v.(string) != "" {
+		config["username"] = v.(string)
+	}
+	if v, ok := d.GetOk(repoWebhookIconUrl); ok && v.(string) != "" {
+		config["icon_url"] = v.(string)
+	}
+	if v, ok := d.GetOk(repoWebhookColor); ok && v.(string) != "" {
+		config["color"] = v.(string)
+	}
+
+	return config
+}
+
 func resourceRepositoryWebhookCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	client := meta.(*gitea.Client)
 
 	user := d.Get(repoWebhookUsername).(string)
 	repo := d.Get(repoWebhookName).(string)
 
-	config := map[string]string{
-		"url":          d.Get(repoWebhookUrl).(string),
-		"content_type": d.Get(repoWebhookContentType).(string),
-	}
-
-	secret := d.Get(repoWebhookSecret).(string)
-	if secret != "" {
-		config["secret"] = secret
-	}
+	config := buildWebhookConfigMap(d)
 
 	events := make([]string, 0)
 	for _, element := range d.Get(repoWebhookEvents).([]interface{}) {
@@ -100,15 +142,7 @@ func resourceRepositoryWebhookUpdate(d *schema.ResourceData, meta interface{}) (
 		return err
 	}
 
-	config := map[string]string{
-		"url":          d.Get(repoWebhookUrl).(string),
-		"content_type": d.Get(repoWebhookContentType).(string),
-	}
-
-	secret := d.Get(repoWebhookSecret).(string)
-	if secret != "" {
-		config["secret"] = secret
-	}
+	config := buildWebhookConfigMap(d)
 
 	events := make([]string, 0)
 	for _, element := range d.Get(repoWebhookEvents).([]interface{}) {
@@ -167,7 +201,10 @@ func setRepositoryWebhookData(hook *gitea.Hook, d *schema.ResourceData) (err err
 	d.Set(repoWebhookUrl, hookConfigValue(hook, "url"))
 	d.Set(repoWebhookContentType, hookConfigValue(hook, "content_type"))
 
-	secret := d.Get(repoWebhookSecret).(string)
+	secret := hookConfigValue(hook, "secret")
+	if secret == "" {
+		secret = d.Get(repoWebhookSecret).(string)
+	}
 	if secret != "" {
 		d.Set(repoWebhookSecret, secret)
 	}
@@ -177,6 +214,26 @@ func setRepositoryWebhookData(hook *gitea.Hook, d *schema.ResourceData) (err err
 	d.Set(repoWebhookActive, hook.Active)
 	d.Set(repoWebhookCreatedAt, hook.Created)
 	d.Set(repoWebhookAuthorizationHeader, hook.AuthorizationHeader)
+
+	if v := hookConfigValue(hook, "http_method"); v != "" {
+		d.Set(repoWebhookHttpMethod, v)
+	}
+	if v := hookConfigValue(hook, "channel"); v != "" {
+		d.Set(repoWebhookChannel, v)
+	}
+	if v := hookConfigValue(hook, "username"); v != "" {
+		d.Set(repoWebhookSlackUsername, v)
+	}
+	if v := hookConfigValue(hook, "icon_url"); v != "" {
+		d.Set(repoWebhookIconUrl, v)
+	}
+	if v := hookConfigValue(hook, "color"); v != "" {
+		d.Set(repoWebhookColor, v)
+	}
+
+	if hook.Config != nil {
+		d.Set(repoWebhookConfig, hook.Config)
+	}
 
 	return
 }
@@ -230,26 +287,28 @@ func resourceGiteaRepositoryWebhook() *schema.Resource {
 			"type": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Webhook type, e.g. `gitea`",
+				Description: "Webhook type, e.g. `gitea`, `gogs`, `slack`, `discord`, `dingtalk`, `msteams`, `telegram`, `feishu`, `matrix`, `wechatwork`, `packagist`",
 			},
 			"url": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "Target URL of the webhook",
 			},
 			"content_type": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "The content type of the payload. It can be `json`, or `form`",
 			},
 			"secret": {
 				Type:        schema.TypeString,
 				Optional:    true,
+				Sensitive:   true,
 				Description: "Webhook secret",
 			},
 			"authorization_header": {
 				Type:        schema.TypeString,
 				Optional:    true,
+				Sensitive:   true,
 				Description: "Webhook authorization header",
 			},
 			"events": {
@@ -258,22 +317,55 @@ func resourceGiteaRepositoryWebhook() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Required:    true,
-				Description: "A list of events that will trigger the webhool, e.g. `[\"push\"]`",
+				Description: "A list of events that will trigger the webhook, e.g. `[\"push\"]`",
 			},
 			"branch_filter": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
+				Default:     "*",
 				Description: "Set branch filter on the webhook, e.g. `\"*\"`",
 			},
 			"active": {
 				Type:        schema.TypeBool,
-				Required:    true,
+				Optional:    true,
+				Default:     true,
 				Description: "Set webhook to active, e.g. `true`",
 			},
 			"created_at": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Webhook creation timestamp",
+			},
+			"channel": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Channel name for Slack webhooks (e.g. `#general` or `@username`)",
+			},
+			"slack_username": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Bot username for Slack webhooks",
+			},
+			"icon_url": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Icon URL for Slack or Discord webhooks",
+			},
+			"color": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Hex color code for Slack webhooks (e.g. `#ff0000`)",
+			},
+			"http_method": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "HTTP method used for the webhook",
+			},
+			"config": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Description: "Additional key-value configuration options for webhooks",
 			},
 		},
 		Description: "This resource allows you to create and manage webhooks for repositories.",

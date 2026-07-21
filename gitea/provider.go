@@ -86,6 +86,7 @@ func Provider() *schema.Provider {
 			"gitea_actions_jobs":                      dataSourceGiteaActionsJobs(),
 			"gitea_actions_runner_registration_token": dataSourceGiteaActionsRunnerRegistrationToken(),
 			"gitea_repository_actions_artifact":       dataSourceGiteaRepositoryActionsArtifact(),
+			"gitea_repository_webhook":                dataSourceGiteaRepositoryWebhook(),
 			"gitea_repositories":                      dataSourceGiteaRepos(),
 		},
 

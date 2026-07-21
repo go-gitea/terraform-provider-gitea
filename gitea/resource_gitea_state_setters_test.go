@@ -66,6 +66,76 @@ func TestSetRepositoryWebhookDataUsesHookFields(t *testing.T) {
 	}
 }
 
+func TestSetRepositoryWebhookDataSlack(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, resourceGiteaRepositoryWebhook().Schema, map[string]interface{}{
+		"username": "test-owner",
+		"name":     "test-repo",
+		"type":     "slack",
+	})
+
+	hook := &gitea.Hook{
+		ID:     42,
+		Type:   "slack",
+		Events: []string{"push"},
+		Config: map[string]string{
+			"url":      "https://hooks.slack.com/services/xxx",
+			"channel":  "#dev",
+			"username": "gitea-bot",
+			"icon_url": "https://example.com/icon.png",
+			"color":    "#00ff00",
+		},
+		BranchFilter: "*",
+		Active:       true,
+	}
+
+	if err := setRepositoryWebhookData(hook, d); err != nil {
+		t.Fatalf("setRepositoryWebhookData returned error: %v", err)
+	}
+
+	if got := d.Get(repoWebhookChannel).(string); got != "#dev" {
+		t.Fatalf("expected channel #dev, got %q", got)
+	}
+	if got := d.Get(repoWebhookSlackUsername).(string); got != "gitea-bot" {
+		t.Fatalf("expected slack_username gitea-bot, got %q", got)
+	}
+	if got := d.Get(repoWebhookIconUrl).(string); got != "https://example.com/icon.png" {
+		t.Fatalf("expected icon_url https://example.com/icon.png, got %q", got)
+	}
+	if got := d.Get(repoWebhookColor).(string); got != "#00ff00" {
+		t.Fatalf("expected color #00ff00, got %q", got)
+	}
+}
+
+func TestBuildWebhookConfigMapSlack(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, resourceGiteaRepositoryWebhook().Schema, map[string]interface{}{
+		"username":       "test-owner",
+		"name":           "test-repo",
+		"type":           "slack",
+		"url":            "https://hooks.slack.com/services/xxx",
+		"channel":        "#general",
+		"slack_username": "my-bot",
+		"icon_url":       "https://example.com/bot.png",
+		"color":          "#ff0000",
+	})
+
+	cfg := buildWebhookConfigMap(d)
+	if got := cfg["url"]; got != "https://hooks.slack.com/services/xxx" {
+		t.Fatalf("expected url in config map, got %q", got)
+	}
+	if got := cfg["channel"]; got != "#general" {
+		t.Fatalf("expected channel #general in config map, got %q", got)
+	}
+	if got := cfg["username"]; got != "my-bot" {
+		t.Fatalf("expected username my-bot in config map, got %q", got)
+	}
+	if got := cfg["icon_url"]; got != "https://example.com/bot.png" {
+		t.Fatalf("expected icon_url in config map, got %q", got)
+	}
+	if got := cfg["color"]; got != "#ff0000" {
+		t.Fatalf("expected color #ff0000 in config map, got %q", got)
+	}
+}
+
 func TestSetRepoResourceDataUsesRepositoryFields(t *testing.T) {
 	d := schema.TestResourceDataRaw(t, resourceGiteaRepository().Schema, map[string]interface{}{
 		"username":                    "stale-owner",
