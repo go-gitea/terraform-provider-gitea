@@ -103,6 +103,11 @@ func dataSourceGiteaRepo() *schema.Resource {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
+			"default_merge_style": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Default merge style for pull requests in the repository",
+			},
 		},
 	}
 }
@@ -145,6 +150,7 @@ func dataSourceGiteaRepoRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("watchers", repo.Watchers)
 	d.Set("open_issue_count", repo.OpenIssues)
 	d.Set("default_branch", repo.DefaultBranch)
+	d.Set("default_merge_style", string(repo.DefaultMergeStyle))
 	d.Set("created", repo.Created)
 	d.Set("updated", repo.Updated)
 	d.Set("permission_admin", repo.Permissions.Admin)

@@ -90,6 +90,7 @@ variable "gitea_clone_token" {
 - `auto_init` (Boolean) Flag if the repository should be initiated with the configured values
 - `autodetect_manual_merge` (Boolean)
 - `default_branch` (String) The default branch of the repository. Defaults to `main`
+- `default_merge_style` (String) The default merge style for pull requests in this repository. Possible values are `merge`, `rebase`, `rebase-merge`, `squash`, `fast-forward-only`, or `manually-merged`.
 - `description` (String) The description of the repository.
 - `gitignores` (String) A specific gitignore that should be commited to the repositoryon creation if `auto_init` is set to `true`
 Need to exist in the gitea instance

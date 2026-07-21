@@ -123,10 +123,15 @@ func TestSetRepoResourceDataUsesRepositoryFields(t *testing.T) {
 		AllowSquash:               false,
 		Archived:                  true,
 		MirrorInterval:            "8h0m0s",
+		DefaultMergeStyle:         gitea.MergeStyleRebaseMerge,
 	}
 
 	if err := setRepoResourceData(repo, d); err != nil {
 		t.Fatalf("setRepoResourceData returned error: %v", err)
+	}
+
+	if got := d.Get(repoDefaultMergeStyle).(string); got != "rebase-merge" {
+		t.Fatalf("expected default_merge_style rebase-merge, got %q", got)
 	}
 
 	if got := d.Get(repoOwner).(string); got != "api-owner" {

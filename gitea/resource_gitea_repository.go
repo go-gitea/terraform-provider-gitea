@@ -55,6 +55,7 @@ const (
 	migrationLFSEndpoint         string = "migration_lfs_endpoint"
 	repoSourceTemplate           string = "source_template"
 	repoSourceTemplateItems      string = "source_template_items"
+	repoDefaultMergeStyle        string = "default_merge_style"
 )
 
 func searchUserByName(c *gitea.Client, name string) (res *gitea.User, err error) {
@@ -233,6 +234,17 @@ func resourceRepoCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		return err
 	}
 
+	if v, ok := d.GetOk(repoDefaultMergeStyle); ok && v.(string) != "" {
+		mergeStyle := gitea.MergeStyle(v.(string))
+		opts := gitea.EditRepoOption{
+			DefaultMergeStyle: &mergeStyle,
+		}
+		repo, _, err = client.EditRepo(repo.Owner.UserName, repo.Name, opts)
+		if err != nil {
+			return err
+		}
+	}
+
 	err = setRepoResourceData(repo, d)
 
 	return
@@ -279,6 +291,11 @@ func resourceRepoUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		AllowSquash:               &allowSquash,
 		AllowManualMerge:          &allowManualMerge,
 		AutodetectManualMerge:     &autodetectManualMerge,
+	}
+
+	if v, ok := d.GetOk(repoDefaultMergeStyle); ok && v.(string) != "" {
+		mergeStyle := gitea.MergeStyle(v.(string))
+		opts.DefaultMergeStyle = &mergeStyle
 	}
 
 	if d.Get(repoMirror).(bool) {
@@ -421,6 +438,7 @@ func setRepoResourceData(repo *gitea.Repository, d *schema.ResourceData) (err er
 	d.Set(repoAllowRebaseMerge, repo.AllowRebaseMerge)
 	d.Set(repoAllowSquash, repo.AllowSquash)
 	d.Set(repoArchived, repo.Archived)
+	d.Set(repoDefaultMergeStyle, string(repo.DefaultMergeStyle))
 	d.Set(migrationMirrorInterval, repo.MirrorInterval)
 	if repo.Permissions != nil {
 		d.Set("permission_admin", repo.Permissions.Admin)
@@ -737,6 +755,12 @@ func resourceGiteaRepository() *schema.Resource {
 				},
 				Description: "List of items that will be used from the template." +
 					"Possible values are `gitcontent`, `githooks`, `webhooks`, `topics`, `avatar`, `labels`",
+			},
+			"default_merge_style": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "The default merge style for pull requests in this repository. Possible values are `merge`, `rebase`, `rebase-merge`, `squash`, `fast-forward-only`, or `manually-merged`.",
 			},
 		},
 		Description: "`gitea_repository` manages a gitea repository.\n\n" +
