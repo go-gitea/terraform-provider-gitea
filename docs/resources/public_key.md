@@ -47,3 +47,20 @@ resource "gitea_public_key" "test_user_key" {
 - `fingerprint` (String)
 - `id` (String) The ID of this resource.
 - `type` (String)
+
+## Import
+
+Using `import` blocks in Terraform v1.5.0 and later:
+
+```terraform
+import {
+  to = gitea_public_key.example
+  id = "<id>"
+}
+```
+
+Using `terraform import` in Terraform v1.4.0 and earlier:
+
+```shell
+terraform import gitea_public_key.example <id>
+```

@@ -57,3 +57,20 @@ resource "gitea_fork" "org2_fork_of_repo1_in_org1" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+## Import
+
+Using `import` blocks in Terraform v1.5.0 and later:
+
+```terraform
+import {
+  to = gitea_fork.example
+  id = "<id>"
+}
+```
+
+Using `terraform import` in Terraform v1.4.0 and earlier:
+
+```shell
+terraform import gitea_fork.example <id>
+```

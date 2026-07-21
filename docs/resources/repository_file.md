@@ -85,3 +85,20 @@ resource "gitea_repository_file" "example_base64" {
 - `id` (String) The ID of this resource.
 - `last_commit_sha` (String) The SHA of the last commit
 - `size` (Number) The size of the file in bytes
+
+## Import
+
+Using `import` blocks in Terraform v1.5.0 and later:
+
+```terraform
+import {
+  to = gitea_repository_file.example
+  id = "<username>/<repo>/<branch>/<file_path>"
+}
+```
+
+Using `terraform import` in Terraform v1.4.0 and earlier:
+
+```shell
+terraform import gitea_repository_file.example <username>/<repo>/<branch>/<file_path>
+```

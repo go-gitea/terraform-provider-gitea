@@ -20,14 +20,14 @@ resource "gitea_user" "example" {
   email      = "repo_example_user@user.dev"
 }
 
-resource "gitea_repository" "test-repository" {
-  name = "test-repository"
+resource "gitea_repository" "test_repository" {
+  name     = "test-repository"
   username = gitea_user.example.username
 }
 
-resource "gitea_repository_branch" "test-branch" {
-  name = "feat/testing-branch"
-  repository = gitea_repository.test-repo.id
+resource "gitea_repository_branch" "test_branch" {
+  name       = "feat/testing-branch"
+  repository = gitea_repository.test_repository.id
 }
 ```
 
@@ -42,3 +42,20 @@ resource "gitea_repository_branch" "test-branch" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+## Import
+
+Using `import` blocks in Terraform v1.5.0 and later:
+
+```terraform
+import {
+  to = gitea_repository_branch.example
+  id = "<repo_id>/<branch_name>"
+}
+```
+
+Using `terraform import` in Terraform v1.4.0 and earlier:
+
+```shell
+terraform import gitea_repository_branch.example <repo_id>/<branch_name>
+```

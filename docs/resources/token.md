@@ -55,3 +55,20 @@ output "token" {
 - `id` (String) The ID of this resource.
 - `last_eight` (String)
 - `token` (String, Sensitive) The actual Access Token
+
+## Import
+
+Using `import` blocks in Terraform v1.5.0 and later:
+
+```terraform
+import {
+  to = gitea_token.example
+  id = "<id>"
+}
+```
+
+Using `terraform import` in Terraform v1.4.0 and earlier:
+
+```shell
+terraform import gitea_token.example <id>
+```

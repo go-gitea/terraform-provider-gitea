@@ -59,3 +59,22 @@ resource "gitea_user" "test" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+## Import
+
+Using `import` blocks in Terraform v1.5.0 and later:
+
+```terraform
+import {
+  to = gitea_user.example
+  id = "<id>"
+}
+```
+
+Using `terraform import` in Terraform v1.4.0 and earlier:
+
+```shell
+terraform import gitea_user.example <id>
+```
+
+Note: `password` must remain configured in HCL as Gitea API does not return passwords.

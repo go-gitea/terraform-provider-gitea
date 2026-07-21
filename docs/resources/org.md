@@ -47,3 +47,20 @@ resource "gitea_repository" "example" {
 - `avatar_url` (String)
 - `id` (String) The ID of this resource.
 - `repos` (List of String) List of all Repositories that are part of this organisation
+
+## Import
+
+Using `import` blocks in Terraform v1.5.0 and later:
+
+```terraform
+import {
+  to = gitea_org.example
+  id = "<id>"
+}
+```
+
+Using `terraform import` in Terraform v1.4.0 and earlier:
+
+```shell
+terraform import gitea_org.example <id>
+```

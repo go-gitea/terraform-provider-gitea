@@ -49,3 +49,20 @@ resource "gitea_team_members" "example_members" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+## Import
+
+Using `import` blocks in Terraform v1.5.0 and later:
+
+```terraform
+import {
+  to = gitea_team_members.example
+  id = "<team_id>"
+}
+```
+
+Using `terraform import` in Terraform v1.4.0 and earlier:
+
+```shell
+terraform import gitea_team_members.example <team_id>
+```

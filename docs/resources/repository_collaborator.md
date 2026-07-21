@@ -57,3 +57,20 @@ resource "gitea_repository_collaborator" "example" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+## Import
+
+Using `import` blocks in Terraform v1.5.0 and later:
+
+```terraform
+import {
+  to = gitea_repository_collaborator.example
+  id = "<owner>/<repo>/<username>"
+}
+```
+
+Using `terraform import` in Terraform v1.4.0 and earlier:
+
+```shell
+terraform import gitea_repository_collaborator.example <owner>/<repo>/<username>
+```
