@@ -1,0 +1,31 @@
+name: Sync to GitHub
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Push main branch and tags to GitHub
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+        run: |
+          if [ -z "${MIRROR_TOKEN}" ]; then
+            echo "MIRROR_TOKEN secret is required to push to GitHub" >&2
+            exit 1
+          fi
+
+          git remote add github "https://x-access-token:${MIRROR_TOKEN}@github.com/go-gitea/terraform-provider-gitea.git"
+          git push github HEAD:refs/heads/main
+          git push github --tags
